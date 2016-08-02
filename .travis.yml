@@ -1,0 +1,12 @@
+lang: objective-c 
+
+os:
+  - osx
+
+osx_image: xcode7.3
+xcode_project: langsrv.xcodeproj
+xcode_scheme: langsrv
+
+before_install:
+  - echo "--- Environment ---" && env | sort && echo "--- End of Environment ---"
+
