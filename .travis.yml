@@ -1,18 +1,23 @@
+language: swift
+
 matrix:
   include:
     - os: linux
+      sudo: required
       language: generic
-      dist: trusty
-      sudo: false
     - os: osx
-      language: objective-c
       osx_image: xcode8.3
+      sudo: required
+      language: objective-c
+
 script:
   - swift build
   - swift test
+
 before_install:
   - chmod ugo+x ./Scripts/InstallSwift.sh
   - . ./Scripts/InstallSwift.sh
+
 notifications:
   email:
     on_success: never
