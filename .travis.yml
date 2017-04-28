@@ -3,12 +3,12 @@ language: swift
 matrix:
     include:
         - os: linux
-          sudo: required
-          language: c++
+          dist: trusty
+          sudo: false
         - os: osx
           osx_image: xcode8.3
-          sudo: required
           language: objective-c
+          sudo: required
 
 script:
     - swift build
