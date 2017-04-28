@@ -1,12 +1,18 @@
-os:
-  - osx
-language: generic
-sudo: required
-dist: trusty
-osx_image: xcode8.3
+matrix:
+  include:
+    - os: linux
+      language: generic
+      dist: trusty
+      sudo: false
+    - os: osx
+      language: objective-c
+      osx_image: xcode8.3
 script:
   - swift build
   - swift test
+before_install:
+  - chmod ugo+x ./Scripts/InstallSwift.sh
+  - . ./Scripts/InstallSwift.sh
 notifications:
   email:
     on_success: never
