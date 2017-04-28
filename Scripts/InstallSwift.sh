@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -ev
-
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 	DIR="$(pwd)"
 	cd ..
