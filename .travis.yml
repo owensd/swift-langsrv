@@ -1,10 +1,9 @@
-language: swift
-
 matrix:
     include:
         - os: linux
           dist: trusty
-          sudo: false
+          sudo: required
+          language: cpp
         - os: osx
           osx_image: xcode8.3
           language: objective-c
