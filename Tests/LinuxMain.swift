@@ -1,5 +1,5 @@
 import XCTest
-@testable import swiftlangsrv
+@testable import langsrvlibTests
 
 XCTMain([
     testCase(InterfaceTests.allTests),

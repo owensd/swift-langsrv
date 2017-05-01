@@ -5,6 +5,6 @@ import PackageDescription
 let package = Package(
     name: "swiftlangsrv",
     dependencies: [
-        .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 1, minor: 0)
+        .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 1, minor: 1)
     ]
 )

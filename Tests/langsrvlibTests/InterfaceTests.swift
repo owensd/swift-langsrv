@@ -6,12 +6,13 @@
 import XCTest
 @testable import langsrvlib
 
+extension String: Error {}
+
 
 /// These are just basic tests to ensure that the desired API usage contracts are maintained.
 class InterfaceTests: XCTestCase {
     class TestSource: MessageSource {
-        func start(received: (MessageData) -> ()) {}
-        func stop() {}
+        func run(received: (MessageData) -> ()) -> Never { fatalError("test run") }
     }
 
     class BytesToStringAdapter: MessageProtocolDataAdapter {
@@ -22,14 +23,12 @@ class InterfaceTests: XCTestCase {
 
     class StringToLanguageServerCommandAdapter: MessageProtocolDataAdapter {
         func translate(data: String) throws -> LanguageServerCommand {
-            return .initialize
+            throw "nyi"
         }
     }
 
     func testMessageSourceUsage() {
-        func onreceive(data: MessageData) {}
-        let source = TestSource()
-        source.start(received: onreceive)
+        let _ = TestSource()
     }
 
     func testBytesToStringAdapter() {

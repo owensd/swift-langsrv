@@ -9,11 +9,8 @@ public typealias MessageData = [UInt8]
 /// The bottom layer in the messaging stack that is the source of the raw message data.
 public protocol MessageSource {
     /// Starts listening for new messages to come in. Whenever a message comes in, the `received`
-    /// closure is invoked.
-    func start(received: (MessageData) -> ())
-
-    /// Stops listening for new messages to come in.
-    func stop()
+    /// closure is invoked. This function is not intended to return execution back to its thread.
+    func run(received: (MessageData) -> ()) -> Never
 }
 
 /// Used to convert data from the `SourceDataType` layer to the `TargetDataType` layer.
