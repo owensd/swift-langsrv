@@ -3,14 +3,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-langsrv",
+    name: "swiftlangsrv",
     dependencies: [
-    ],
-    exclude: [
-        "Config",
-        "Database",
-        "Localization",
-        "Public",
-        "Resources",
+        .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 1, minor: 0)
     ]
 )
