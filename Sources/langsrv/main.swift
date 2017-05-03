@@ -7,8 +7,7 @@
 
 // Currently, the only supported language server protocol is `vscode-jsonrpc`.
 
-print("disabled everything!")
 let standardInput = StandardInputMessageSource()
 let jsonrpc = LanguageServerProtocol()
-// let langsrv = SwiftLanguageServer(source: standardInput, transport: jsonprc)
-// langsrv.run()
+let langsrv = SwiftLanguageServer()
+langsrv.run(source: standardInput, transport: jsonrpc)
