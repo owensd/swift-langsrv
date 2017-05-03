@@ -14,10 +14,14 @@
 
 
 /// A message source that pulls data in from `stdin`.
-final class StandardInputMessageSource: MessageSource {
+public final class StandardInputMessageSource: MessageSource {
+
+    /// Whew! Look at the value of this!
+    public init() {}
+
     /// Continuously monitors the `stdin`
     /// SwiftBug(SR-2729) - This will cause a compiler warning for all conforming types.
-    func run(received: ([UInt8]) -> ()) -> Never {
+    public func run(received: ([UInt8]) -> ()) -> Never {
         var input = fd_set()
 
         // NOTE(owensd): If you're reading this code... I'm sorry. I'm not 100% that this is
@@ -112,4 +116,5 @@ private func set(descriptor: Int32, fd: inout fd_set) {
 /// Resets all of the bits to `0` in the `fd_set`.
 @inline(__always) private func zero(fd: inout fd_set) {
     fd.__fds_bits = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-}#endif
+}
+#endif

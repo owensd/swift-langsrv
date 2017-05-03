@@ -13,32 +13,14 @@ public protocol MessageSource {
     func run(received: (MessageData) -> ()) -> Never
 }
 
-/// Used to convert data from the `SourceDataType` layer to the `TargetDataType` layer.
-/// This adapter is the key to providing truly pluggable interfaces through the stack.
-protocol MessageProtocolDataAdapter {
-    /// The incoming type of data that will need to be translated.
-    associatedtype SourceDataType
-
-    /// The outgoing type of data that the `SourceDataType` will be translated to.
-    associatedtype TargetDataType
-
+/// A message protocol is a layer that is used to convert an incoming message of type
+/// `MessageData` into a usable `LanguageServerCommand`. If that message cannot be
+/// converted, then the `translate` function will throw.
+public protocol MessageProtocol {
     /// Translates the data from the raw `MessageData` to a valid `ProtocolDataType`.
     /// This function can throw, providing detailed error information about why the
     /// transformation could not be done.
-    func translate(data: SourceDataType) throws -> TargetDataType
-}
-
-/// The base requirements for all language servers to implement within the system.
-protocol LanguageServer {
-    associatedtype MessageProtocol
-
-    /// Used to create a new language server and provide the mechanism to receive messages.
-    init(_ messageProtocol: MessageProtocol)
-
-    /// Runs the language server. This waits for input, parses it, and then triggers the
-    /// appropriately registered handler.
-    /// SwiftBug(SR-2729) - This will cause a compiler warning for all conforming types.
-    func run() -> Never
+    func translate(data: MessageData) throws -> LanguageServerCommand
 }
 
 /// Defines the API to describe a command for the language server.
@@ -46,14 +28,14 @@ protocol LanguageServer {
 /// JSONRPC spec. This is by-design to allow for easier development. However, this coupling
 /// does **NOT** preclude a different serialization strategy. The only thing it binds is
 /// the semantics of the API, which is deemed appropriate at this time.
-protocol LanguageServerCommand {
+public protocol LanguageServerCommand {
     var type: CommandType { get }
     var source: CommandSource { get }
 }
 
 /// Each language server command has a specific type that requires different logic
 /// to handle how it's processed and if it requires a response.
-enum CommandType {
+public enum CommandType {
     /// A 1-way message that requires no response.
     case notification
 
@@ -65,7 +47,7 @@ enum CommandType {
 }
 
 /// The source that created the message.
-enum CommandSource {
+public enum CommandSource {
     /// The language server instance.
     case languageServer
 

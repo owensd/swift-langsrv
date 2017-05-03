@@ -2,5 +2,6 @@ import XCTest
 @testable import langsrvlibTests
 
 XCTMain([
-    testCase(InterfaceTests.allTests),
+    testCase(HeaderAcceptanceTests.allTests),
+    testCase(HeaderRejectionTests.allTests)
 ])
