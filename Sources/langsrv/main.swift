@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License in the project root for license information.
  */
 
- import langsrvlib
+import langsrvlib
 
 // Currently, the only supported language server protocol is `vscode-jsonrpc`.
 

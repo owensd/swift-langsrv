@@ -48,6 +48,9 @@ public final class StandardInputMessageSource: MessageSource {
                 
                 received(buffer)
             }
+            else {
+                fatalError("no stdin present")
+            }
         }
     }
 }

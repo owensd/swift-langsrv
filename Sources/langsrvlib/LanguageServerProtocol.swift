@@ -1,5 +1,5 @@
 /*
- * This file implements all of the necessary components for implementing the 'Language Server Protocol'
+ * This file implements the necessary components for implementing the 'Language Server Protocol'
  * as defined here: https://github.com/Microsoft/language-server-protocol/. 
  *
  * This is a common, JSON-RPC based protocol used to define interactions between a client endpoint,
@@ -32,9 +32,7 @@ public final class LanguageServerProtocol: MessageProtocol {
         var buffer = data
         let raw = String(cString: &buffer)
         if raw.characters.count > 0 {
-            guard let message = try? parse(message: raw) else {
-                throw "the message is invalid"
-            }
+            let message = try parse(message: raw)
 
             guard let json = JSValue.parse(message.data).value else {
                 throw "unable to parse the incoming message"
@@ -44,8 +42,11 @@ public final class LanguageServerProtocol: MessageProtocol {
                 throw "The only 'jsonrpc' value supported is '2.0'."
             }
             
-            // TODO(owensd): Convert this into a proper LanguageServerCommand
-            throw "nyi"
+            switch json["method"] {
+            case "initialize":
+                return .initialize(requestId: try RequestId(json["id"]), params: try InitializeParams(json["params"]))
+            default: throw "unhandled method \(json["method"].string ?? "no method")"
+            }
         }
 
         throw "invalid message length"
@@ -56,30 +57,29 @@ public final class LanguageServerProtocol: MessageProtocol {
 /// incoming message data. A valid header will have all of this data, though some may be
 /// defaulted. In addition, fields like `contentType` and `charset` must be specific values
 /// to be supported by this system.
-
-public struct MessageHeader {
+struct MessageHeader {
     /// The number of bytes that the data region of the message occupies.
-    public var contentLength: Int
+    var contentLength: Int
 
     /// The mechanism that describes how the data region is structured.
     /// This defaults to `.jsonrpc`.
-    public var contentType: ContentType
+    var contentType: ContentType
 
     /// The way the data in the region is encoded. This defaults to `.utf8`.
-    public var encodingType: EncodingType
+    var encodingType: EncodingType
 
     /// The supported data region encoding types.
-    public enum ContentType: String {
+    enum ContentType: String {
         case jsonrpc = "application/vscode-jsonrpc"
     }
 
     /// The supported data encoding format.
-    public enum EncodingType: String {
+    enum EncodingType: String {
         case utf8 = "utf-8"
     }
 }
 
-public extension MessageHeader {
+extension MessageHeader {
     init(length: Int = 0, type: ContentType = .jsonrpc, encodingType: EncodingType = .utf8) {
         self.contentLength = length
         self.contentType = type
@@ -87,7 +87,7 @@ public extension MessageHeader {
     }
 }
 
-public extension MessageHeader.ContentType {
+extension MessageHeader.ContentType {
     static func from(string: String?) -> MessageHeader.ContentType? {
         if let value = string?.lowercased() {
             return value == MessageHeader.ContentType.jsonrpc.rawValue ? .jsonrpc : nil
@@ -97,7 +97,7 @@ public extension MessageHeader.ContentType {
     }
 }
 
-public extension MessageHeader.EncodingType {
+extension MessageHeader.EncodingType {
     static func from(string: String?) -> MessageHeader.EncodingType? {
         // Note(owensd): For backwards compatibility, "utf8" is also supported.
         switch string?.lowercased() {
@@ -108,82 +108,10 @@ public extension MessageHeader.EncodingType {
     }
 }
 
-public struct RawMessage {
+struct RawMessage {
     var header: MessageHeader
     var data: String
 }
-
-public class Message {
-    var jsonrpc: String
-
-    init() {
-        jsonrpc = "2.0"
-    }
-}
-
-public class RequestMessage: Message {
-    public var id: Int
-    public var method: String
-    public var params: [String:AnyObject]
-
-    public init(id: Int, method: String, params: [String:AnyObject] = [:]) {
-        self.id = id
-        self.method = method
-        self.params = params
-    }
-}
-
-public class ResponseMessage: Message {
-    public var id: Int?
-    public var result: AnyObject?
-    public var error: ResponseError?
-
-    public init(id: Int? = nil, result: AnyObject? = nil, error: ResponseError? = nil) {
-        self.id = id
-        self.result = result
-        self.error = error
-    }
-}
-
-public class ResponseError {
-    public var code: Int
-    public var message: String
-    public var data: AnyObject?
-
-    public init(code: Int, message: String, data: AnyObject? = nil) {
-        self.code = code
-        self.message = message
-        self.data = data
-    }
-}
-
-public enum ErrorCodes: Int {
-	// Defined by JSON RPC
-	case parseError = -32700
-	case invalidRequest = -32600
-	case methodNotFound = -32601
-	case invalidParams = -32602
-	case internalError = -32603
-	case serverErrorStart = -32099
-	case serverErrorEnd = -32000
-	case serverNotInitialized = -32002
-	case unknownErrorCode = -32001
-
-	// Defined by the protocol.
-	case requestCancelled = -32800
-}
-
-public class NotificationMessage: Message {
-    var method: String
-    var params: [String:AnyObject]
-
-    init(method: String, params: [String:AnyObject]) {
-        self.method = method
-        self.params = params
-    }
-}
-
-
 
 func parse(message data: String) throws -> RawMessage {
     enum ParserState {
@@ -196,26 +124,22 @@ func parse(message data: String) throws -> RawMessage {
 
     var newLineCount = 0
     for c in data.characters {
-        if (c == "\r" || c == "\n") {
-            if c == "\n" { newLineCount += 1 }
-            if newLineCount == 2 {
-                state = .body
-            }
+        if c == "\r\n" || c == "\r" || c == "\n" {
+            newLineCount += 1
         }
 
         switch state {
-            case .header: header += "\(c)"
+            case .header:
+                header += "\(c)"
+                if newLineCount == 2 {
+                    state = .body
+                }
+
             case .body: body += "\(c)"
         }
     }
 
-    if state != .body {
-        throw "message is not properly separated by '\\r\\n\\r\\n' or '\\n\\n'"
-    }
-
-    guard let parsedHeader = try? parse(header: header) else {
-        throw "unable to parse the header"
-    }
+    let parsedHeader = try parse(header: header)
     guard let parsedData = parse(body: body) else {
         throw "unable to parse the body"
     }

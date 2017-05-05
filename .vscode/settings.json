@@ -13,5 +13,6 @@
         "**/bower_components": true,
         ".build": true,
         "Package.pins": true
-    }
+    },
+    "editor.quickSuggestions": false
 }

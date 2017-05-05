@@ -3,6 +3,8 @@
  * Licensed under the MIT License. See License in the project root for license information.
  */
 
+ import JSONLib
+
 /// The type of data that is send from the `MessageSource`.
 public typealias MessageData = [UInt8]
 
@@ -28,29 +30,6 @@ public protocol MessageProtocol {
 /// JSONRPC spec. This is by-design to allow for easier development. However, this coupling
 /// does **NOT** preclude a different serialization strategy. The only thing it binds is
 /// the semantics of the API, which is deemed appropriate at this time.
-public protocol LanguageServerCommand {
-    var type: CommandType { get }
-    var source: CommandSource { get }
-}
-
-/// Each language server command has a specific type that requires different logic
-/// to handle how it's processed and if it requires a response.
-public enum CommandType {
-    /// A 1-way message that requires no response.
-    case notification
-
-    /// A request that requires a response.
-    case request
-
-    /// A response to a particular request.
-    case response
-}
-
-/// The source that created the message.
-public enum CommandSource {
-    /// The language server instance.
-    case languageServer
-
-    /// The host, usually an editor or IDE.
-    case host
+public enum LanguageServerCommand {
+    case initialize(requestId: RequestId?, params: InitializeParams)
 }
