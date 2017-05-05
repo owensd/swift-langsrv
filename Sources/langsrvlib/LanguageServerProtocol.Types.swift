@@ -118,12 +118,8 @@ public struct InitializeParams {
      /// `rootUri` are set, `rootUri` wins.
 	public var rootUri: String?  // TODO(owensd): Fix this to be a URI type, what's in foundation?
 
-    // TODO(owensd): Finish up the InitializeParams
-
-	// /**
-	//  * User provided initialization options.
-	//  */
-	// initializationOptions?: any;
+	/// User provided initialization options.
+	public var initializationOptions: AnyObject? = nil
 
 	// /**
 	//  * The capabilities provided by the client (editor or tool)

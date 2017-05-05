@@ -29,7 +29,7 @@ extension InitializeParams {
         self.rootPath = dict["rootPath"]?.string ?? nil
         self.rootUri = dict["rootUri"]?.string ?? nil
     }
- }
+}
 
 extension JSValue {
     var integer: Int? { 
@@ -50,7 +50,7 @@ extension JSValue {
 
         switch message.result {
         case let .result(object): dict["result"] = JSValue("object")
-        case let .error(code, message, data): dict["error"] = JSValue("\(code)::\(message)::\(data ?? "nothing" as AnyObject)")
+        case let .error(code, message, data): dict["error"] = JSValue("\(code)::\(message)::\(data ?? "nothing" as! AnyObject)")
         }
 
         self.init(dict)
