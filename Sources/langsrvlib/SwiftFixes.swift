@@ -4,3 +4,18 @@
  */
 
 extension String: Error {}
+
+#if os(Linux)
+// These are simply no-op stubs for now.
+
+struct OSLog {
+    init(subsystem: String, category: String) {}
+}
+
+enum LogTool {
+    case `default`
+}
+
+func os_log(_ string: String, log: OSLog, type: LogTool, _ args: Any...) {}
+
+#endif

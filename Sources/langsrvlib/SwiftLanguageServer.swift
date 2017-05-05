@@ -10,10 +10,10 @@ import JSONLib
 
 #if os(macOS)
 import os.log
+#endif
 
 @available(macOS 10.12, *)
 fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "SwiftLanguageServer")
-#endif
 
 public final class SwiftLanguageServer {
     private var initialized = false
@@ -25,35 +25,28 @@ public final class SwiftLanguageServer {
     /// the appropriately registered handler. If no handler is found, then `unhandled` is triggered
     /// with the contents of the message.
     public func run(source: MessageSource, transport: MessageProtocol) -> Never {
-#if os(macOS)
         if #available(macOS 10.12, *) {
             os_log("Starting the language server.", log: log, type: .default)
         }
-#endif 
+
         source.run() { buffer in
-#if os(macOS)
             if #available(macOS 10.12, *) {
                 os_log("message received: size=%{iec-bytes}d", log: log, type: .default, buffer.count)
                 os_log("message contents:\n%{public}@", log: log, type: .default, String(bytes: buffer, encoding: .utf8) ?? "<cannot convert>")
             }
-#endif
             do {
                 let message = try transport.translate(data: buffer)
-#if os(macOS)
                 if #available(macOS 10.12, *) {
                     os_log("message received: %{public}@", log: log, type: .default, message.debugDescription)
                 }
-#endif
                 if let response = try process(command: message) {
                     print("\(JSValue(response).stringify())")
                 }
             }
             catch {
-#if os(macOS)
                 if #available(macOS 10.12, *) {
                     os_log("unable to convert message into a command: %{public}@", log: log, type: .default, String(describing: error))
                 }
-#endif
             }
         }
     }
