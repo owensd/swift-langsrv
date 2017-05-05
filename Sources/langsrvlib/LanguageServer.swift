@@ -30,6 +30,8 @@ public protocol MessageProtocol {
 /// JSONRPC spec. This is by-design to allow for easier development. However, this coupling
 /// does **NOT** preclude a different serialization strategy. The only thing it binds is
 /// the semantics of the API, which is deemed appropriate at this time.
+/// TODO(owensd): This layer should be technically free from any Language Server Protocol
+/// types... but that's a lot of duplication now for little benefit.
 public enum LanguageServerCommand {
     case initialize(requestId: RequestId?, params: InitializeParams)
 }

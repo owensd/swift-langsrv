@@ -17,11 +17,11 @@ import JSONLib
 public final class LanguageServerProtocol: MessageProtocol {
     /// The raw message content of the message coming into the system. This is the fully unverified,
     /// not parsed, and unmodified content.
-    public typealias RawMessage = String
+    typealias RawMessage = String
 
     /// The fully parsed, but not necessarily validated, message that will be plumbed through to the
     /// various message handlers.
-    public typealias ParsedMessage = JSValue
+    typealias ParsedMessage = JSValue
 
     /// Whew! Look at the value of this!
     public init() {}
