@@ -33,5 +33,5 @@ public protocol MessageProtocol {
 /// TODO(owensd): This layer should be technically free from any Language Server Protocol
 /// types... but that's a lot of duplication now for little benefit.
 public enum LanguageServerCommand {
-    case initialize(requestId: RequestId?, params: InitializeParams)
+    //case initialize(requestId: RequestId?, params: InitializeParams)
 }

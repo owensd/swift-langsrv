@@ -12,6 +12,25 @@
 
 import JSONLib
 
+// NOTE(owensd): These two protocols should maybe move to the JSONLib library itself.
+
+public protocol Encodable {
+    func toJson() -> JSValue
+}
+
+public protocol Decodable {
+    static func from(json: JSValue) throws -> Self
+}
+
+extension JSValue {
+    var integer: Int? { 
+        if let number = self.number {
+            return Int(number)
+        }
+        return nil
+     }
+}
+
 /// This provides the complete implementation necessary to translate an incoming message to a
 /// `LanguageServiceCommand`.
 public final class LanguageServerProtocol: MessageProtocol {
