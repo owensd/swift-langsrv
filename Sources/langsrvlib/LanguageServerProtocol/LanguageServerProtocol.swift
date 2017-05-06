@@ -1,5 +1,5 @@
 /*
- * This file implements the necessary components for implementing the 'Language Server Protocol'
+ * This implements the necessary components for implementing the v3.0 'Language Server Protocol'
  * as defined here: https://github.com/Microsoft/language-server-protocol/. 
  *
  * This is a common, JSON-RPC based protocol used to define interactions between a client endpoint,
@@ -12,8 +12,8 @@
 
 import JSONLib
 
-/// This provides the complete implementation necessary to translate an incoming message to
-/// a `LanguageServiceCommand`.
+/// This provides the complete implementation necessary to translate an incoming message to a
+/// `LanguageServiceCommand`.
 public final class LanguageServerProtocol: MessageProtocol {
     /// The raw message content of the message coming into the system. This is the fully unverified,
     /// not parsed, and unmodified content.
@@ -43,8 +43,8 @@ public final class LanguageServerProtocol: MessageProtocol {
             }
             
             switch json["method"] {
-            case "initialize":
-                return .initialize(requestId: try RequestId(json["id"]), params: try InitializeParams(json["params"]))
+            // case "initialize":
+            //     return .initialize(requestId: try RequestId(json["id"]), params: try InitializeParams(json["params"]))
             default: throw "unhandled method \(json["method"].string ?? "no method")"
             }
         }
@@ -53,16 +53,15 @@ public final class LanguageServerProtocol: MessageProtocol {
     }
 }
 
-/// All valid messages coming in will have a header that is a prefix to the content of the
-/// incoming message data. A valid header will have all of this data, though some may be
-/// defaulted. In addition, fields like `contentType` and `charset` must be specific values
-/// to be supported by this system.
+/// All valid messages coming in will have a header that is a prefix to the content of the incoming
+/// message data. A valid header will have all of this data, though some may be defaulted. In
+/// addition, fields like `contentType` and `charset` must be specific values to be supported by
+/// this system.
 struct MessageHeader {
     /// The number of bytes that the data region of the message occupies.
     var contentLength: Int
 
-    /// The mechanism that describes how the data region is structured.
-    /// This defaults to `.jsonrpc`.
+    /// The mechanism that describes how the data region is structured. This defaults to `.jsonrpc`.
     var contentType: ContentType
 
     /// The way the data in the region is encoded. This defaults to `.utf8`.
