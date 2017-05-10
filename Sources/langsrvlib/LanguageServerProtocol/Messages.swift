@@ -39,7 +39,7 @@ public struct RequestMessage<ParamsType: Decodable>: Message {
 /// receiver of a request still needs to return a response message to conform to the JSON RPC
 /// specification. The result property of the ResponseMessage should be set to `null` in this case
 /// to signal a successful request.
-public struct ResponseMessage<ResponseType: Encodable, ErrorType: Encodable>: Message {
+public struct ResponseMessage: Message {
     /// The language server protocol always uses "2.0" as the jsonrpc version.
     public let jsonrpc: String = "2.0"
 
@@ -52,11 +52,11 @@ public struct ResponseMessage<ResponseType: Encodable, ErrorType: Encodable>: Me
     /// NOTE: The spec has this as `result` or `error`, however, this is a deficiency with the type
     /// modelling of TypeScript. There are two possibilities: a result or an error. There is no case
     /// where both `result` and `error` can both have a value or both be `null`.
-    public var result: ResponseResult<ResponseType, ErrorType>
+    public var result: ResponseResult
 
     /// Create a new response message. It is important that the `id` value match the corresponding
     /// request, otherwise the client/server cannot sync properly.
-    public init(id: RequestId? = nil, result: ResponseResult<ResponseType, ErrorType>) {
+    public init(id: RequestId? = nil, result: ResponseResult) {
         self.id = id
         self.result = result
     }
@@ -90,12 +90,12 @@ public enum RequestId {
 }
 
 /// Any given `ResponseMessage` can either return a result or an error.
-public enum ResponseResult<ResultType, ErrorType> {
+public enum ResponseResult {
     /// The result to return back with the response.
-    case result(ResultType)
+    case result(Encodable)
 
     /// The error to return back with the response.
-    case error(code: Int, message: String, data: ErrorType?)
+    case error(code: Int, message: String, data: Encodable?)
 }
 
 // MARK: Serialization
@@ -132,3 +132,18 @@ extension RequestMessage: Decodable {
 }
 
 extension ResponseMessage: Encodable {}
+extension ResponseResult: Encodable {
+    public func toJson() -> JSValue {
+        switch self {
+        case let .result(encodable): return encodable.toJson()
+        case let .error(code, message, data):
+            var json: JSValue = [:]
+            json["code"] = JSValue(Double(code))
+            json["message"] = JSValue(message)
+            if let data = data {
+                json["data"] = data.toJson()
+            }
+            return json
+        }
+    }
+}

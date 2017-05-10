@@ -31,17 +31,17 @@ public final class SwiftLanguageServer {
 
         source.run() { buffer in
             if #available(macOS 10.12, *) {
-                os_log("message received: size=%{iec-bytes}d", log: log, type: .default, buffer.count)
+                os_log("message received: size=%d", log: log, type: .default, buffer.count)
                 os_log("message contents:\n%{public}@", log: log, type: .default, String(bytes: buffer, encoding: .utf8) ?? "<cannot convert>")
             }
             do {
                 let message = try transport.translate(data: buffer)
-                // if #available(macOS 10.12, *) {
-                //     os_log("message received: %{public}@", log: log, type: .default, message.debugDescription)
-                // }
-                // if let response = try process(command: message) {
-                //     print("\(JSValue(response).stringify())")
-                // }
+                if #available(macOS 10.12, *) {
+                    os_log("message received: %{public}@", log: log, type: .default, message.debugDescription)
+                }
+                if let response = try process(command: message) {
+                    print("\(response.toJson())")
+                }
             }
             catch {
                 if #available(macOS 10.12, *) {
@@ -51,24 +51,25 @@ public final class SwiftLanguageServer {
         }
     }
 
-    // private func process(command: LanguageServerCommand) throws -> ResponseMessage? {
-    //     switch command {
-    //     case let .initialize(requestId, params):
-    //         guard let requestId = requestId else { throw "method `initialize` requires a request ID" }
-    //         return doInitialize(requestId, params)
-    //     }
-    // }
+    private func process(command: LanguageServerCommand) throws -> ResponseMessage? {
+        switch command {
+        case let .initialize(requestId, params):
+            guard let requestId = requestId else { throw "method `initialize` requires a request ID" }
+            return doInitialize(requestId, params)
+        }
+    }
 
-    // private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) -> ResponseMessage {
-    //     return ResponseMessage(id: requestId, result: .result("stuff back" as! AnyObject))
-    // }
+    private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) -> ResponseMessage {
+        let capabilities = ServerCapabilities()
+        return ResponseMessage(id: requestId, result: .result(InitializeResult(capabilities: capabilities)))
+    }
 }
 
-// extension LanguageServerCommand: CustomDebugStringConvertible {
-//    public var debugDescription: String {
-//        switch self {
-//        case let .initialize(requestId, params): return "request id: \(requestId!), params: \(params)"
-//        }
-//     }
-// }
+extension LanguageServerCommand: CustomDebugStringConvertible {
+   public var debugDescription: String {
+       switch self {
+       case let .initialize(requestId, params): return "request id: \(requestId!), params: \(params)"
+       }
+    }
+}
 

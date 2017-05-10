@@ -3,9 +3,7 @@
  * Licensed under the MIT License. See License in the project root for license information.
  */
 
- import JSONLib
-
-/// The type of data that is send from the `MessageSource`.
+// The type of data that is send from the `MessageSource`.
 public typealias MessageData = [UInt8]
 
 /// The bottom layer in the messaging stack that is the source of the raw message data.
@@ -33,5 +31,6 @@ public protocol MessageProtocol {
 /// TODO(owensd): This layer should be technically free from any Language Server Protocol
 /// types... but that's a lot of duplication now for little benefit.
 public enum LanguageServerCommand {
-    //case initialize(requestId: RequestId?, params: InitializeParams)
+    case initialize(requestId: RequestId?, params: InitializeParams)
 }
+

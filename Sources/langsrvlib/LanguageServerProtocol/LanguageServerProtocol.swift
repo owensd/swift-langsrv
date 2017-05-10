@@ -53,8 +53,8 @@ public final class LanguageServerProtocol: MessageProtocol {
             }
             
             switch json["method"] {
-            // case "initialize":
-            //     return .initialize(requestId: try RequestId(json["id"]), params: try InitializeParams(json["params"]))
+            case "initialize":
+                return .initialize(requestId: try RequestId.from(json: json["id"]), params: try InitializeParams.from(json: json["params"]))
             default: throw "unhandled method \(json["method"].string ?? "no method")"
             }
         }

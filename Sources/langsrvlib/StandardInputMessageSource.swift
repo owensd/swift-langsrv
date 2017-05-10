@@ -42,11 +42,14 @@ public final class StandardInputMessageSource: MessageSource {
             }
             else if (result > 0) {
                 let bytesRead = read(STDIN_FILENO, &buffer, maxMessageSize)
-                if (bytesRead < 0) {
+                if bytesRead < 0 {
                     fatalError("error reading data... fix it")
                 }
-                
-                received(buffer)
+                else if bytesRead > 0 {
+                    // Is this the best way to do this? /sigh
+                    let data = [UInt8](buffer.split(maxSplits: 1, whereSeparator: { $0 == 0 }).first!)
+                    received(data)
+                }
             }
             else {
                 fatalError("no stdin present")

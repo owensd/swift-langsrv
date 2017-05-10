@@ -6,7 +6,7 @@
 import JSONLib
 
 /// The set of parameters that are used for the `initialize` method.
-public struct InitializeParams<OptionsType: Decodable> {
+public struct InitializeParams {
 	 /// The process Id of the parent process that started the server. Is `null` if the process
      /// has not been started by another process.
 	 /// If the parent process is not alive then the server should exit (see exit notification)
@@ -22,7 +22,7 @@ public struct InitializeParams<OptionsType: Decodable> {
 	public var rootUri: DocumentUri? = nil
 
 	/// User provided initialization options.
-	public var initializationOptions: OptionsType? = nil
+	public var initializationOptions: Decodable? = nil
 
 	/// The capabilities provided by the client (editor or tool).
 	public var capabilities = ClientCapabilities()
@@ -46,7 +46,9 @@ extension InitializeParams {
         let processId = json["processId"].integer ?? nil
         let rootPath = json["rootPath"].string ?? nil
         let rootUri = json["rootUri"].string ?? nil
-        let initializationOptions = try OptionsType.from(json: json["intializationOptions"])
+        // TODO(owensd): Support user options...
+        //let initializationOptions = try type(of: initializationOptions).from(json: json["intializationOptions"])
+        let initializationOptions: Decodable? = nil
         let capabilities = try ClientCapabilities.from(json: json["capabilities"])
         let trace = try TraceSetting.from(json: json["trace"])
 
