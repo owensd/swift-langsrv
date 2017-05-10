@@ -14,5 +14,6 @@
         ".build": true,
         "Package.pins": true
     },
-    "editor.quickSuggestions": false
+    "editor.quickSuggestions": false,
+    "cSpell.enabled": true
 }

@@ -131,20 +131,4 @@ extension RequestMessage: Decodable {
     }
 }
 
-extension ResponseMessage: Encodable {
-    public func toJson() -> JSValue {
-        var json: JSValue = ["jsonrpc": JSValue(self.jsonrpc)]
-        if let requestId = self.id {
-            switch requestId {
-            case let .number(value): json["id"] = JSValue(Double(value))
-            case let .string(value): json["id"] = JSValue(value)
-            }
-        }
-        // switch message.result {
-        // case let .result(object): json["result"] = JSValue("object")
-        // case let .error(code, message, data): json["error"] = JSValue("\(code)::\(message)::\(data ?? "nothing" as! AnyObject)")
-        // }
-
-        return json
-    }
-}
+extension ResponseMessage: Encodable {}

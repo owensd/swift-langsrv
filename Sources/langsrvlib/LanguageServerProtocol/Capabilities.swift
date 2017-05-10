@@ -32,6 +32,118 @@ public struct WorkspaceClientCapabilites {
     // TODO(owensd): fill this in
 }
 
+public struct ServerCapabilities {
+	 /// Defines how text documents are synced. Is either a detailed structure defining each
+	 /// notification or for backwards compatibility the `TextDocumentSyncKind` number.
+	 public var textDocumentSync: TextDocumentSyncOptions?
+
+	// /**
+	//  * The server provides hover support.
+	//  */
+	// hoverProvider?: boolean;
+	// /**
+	//  * The server provides completion support.
+	//  */
+	// completionProvider?: CompletionOptions;
+	// /**
+	//  * The server provides signature help support.
+	//  */
+	// signatureHelpProvider?: SignatureHelpOptions;
+	// /**
+	//  * The server provides goto definition support.
+	//  */
+	// definitionProvider?: boolean;
+	// /**
+	//  * The server provides find references support.
+	//  */
+	// referencesProvider?: boolean;
+	// /**
+	//  * The server provides document highlight support.
+	//  */
+	// documentHighlightProvider?: boolean;
+	// /**
+	//  * The server provides document symbol support.
+	//  */
+	// documentSymbolProvider?: boolean;
+	// /**
+	//  * The server provides workspace symbol support.
+	//  */
+	// workspaceSymbolProvider?: boolean;
+	// /**
+	//  * The server provides code actions.
+	//  */
+	// codeActionProvider?: boolean;
+	// /**
+	//  * The server provides code lens.
+	//  */
+	// codeLensProvider?: CodeLensOptions;
+	// /**
+	//  * The server provides document formatting.
+	//  */
+	// documentFormattingProvider?: boolean;
+	// /**
+	//  * The server provides document range formatting.
+	//  */
+	// documentRangeFormattingProvider?: boolean;
+	// /**
+	//  * The server provides document formatting on typing.
+	//  */
+	// documentOnTypeFormattingProvider?: DocumentOnTypeFormattingOptions;
+	// /**
+	//  * The server provides rename support.
+	//  */
+	// renameProvider?: boolean;
+	// /**
+	//  * The server provides document link support.
+	//  */
+	// documentLinkProvider?: DocumentLinkOptions;
+	// /**
+	//  * The server provides execute command support.
+	//  */
+	// executeCommandProvider?: ExecuteCommandOptions;
+	// /**
+	//  * Experimental server capabilities.
+	//  */
+	// experimental?: any;
+}
+
+
+public struct TextDocumentSyncOptions {
+	/// Open and close notifications are sent to the server.
+	public var openClose: Bool?
+
+	/// Change notificatins are sent to the server.
+	public var change: TextDocumentSyncKind?
+
+	/// Will save notifications are sent to the server.
+	public var willSave: Bool?
+
+	/// Will save wait until requests are sent to the server.
+	public var willSaveWaitUntil: Bool?
+
+	/// Save notifications are sent to the server.
+	public var save: SaveOptions?
+}
+
+/// Save options.
+public struct SaveOptions {
+	/// The client is supposed to include the content on save.
+	public var includeText: Bool?
+}
+
+/// Defines how the host (editor) should sync document changes to the language server.
+public enum TextDocumentSyncKind: Int {
+    /// Documents should not be synced at all.
+	case none = 0
+
+	/// Documents are synced by always sending the full content of the document.
+	case full = 1
+
+	/// Documents are synced by sending the full content on open. After that only incremental
+	/// updates to the document are send.
+	case incremental = 2
+}
+
 
 // MARK: Serialization
 
@@ -41,3 +153,7 @@ extension ClientCapabilities: Decodable {
 		return ClientCapabilities()
 	}
 }
+
+extension ServerCapabilities: Encodable {}
+extension TextDocumentSyncOptions: Encodable {}
+extension TextDocumentSyncKind: Encodable {}

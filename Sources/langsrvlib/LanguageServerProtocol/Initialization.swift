@@ -31,15 +31,12 @@ public struct InitializeParams<OptionsType: Decodable> {
 	public var trace: TraceSetting? = nil
 }
 
-extension InitializeParams: Encodable {
-    public func toJson() -> JSValue {
-        let json: JSValue = [
-            "nyi": "nyi"
-        ]
-
-        return json
-    }
+/// The response to an `Initialize` request.
+public struct InitializeResult {
+    /// This should return all of the capabilities that the server supports.
+    public var capabilities: ServerCapabilities
 }
+
 
 // MARK: Serialization
 
@@ -63,3 +60,5 @@ extension InitializeParams {
         )
     }
 }
+
+extension InitializeResult: Encodable {}
