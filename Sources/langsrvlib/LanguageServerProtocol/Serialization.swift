@@ -39,7 +39,7 @@ public extension Encodable {
                             }
                             else {
                                 if #available(macOS 10.12, *) {
-                                    os_log("Property %@ does not support serialization", log: log, type: .default, name)
+                                    os_log("Property %{public}@ does not support serialization", log: log, type: .default, name)
                                 }
                             }
                         }
@@ -49,7 +49,7 @@ public extension Encodable {
                     }
                     else {
                         if #available(macOS 10.12, *) {
-                            os_log("Property %@ does not support serialization", log: log, type: .default, name)
+                            os_log("Property %{public}@ does not support serialization", log: log, type: .default, name)
                         }
                     }
                 }
@@ -90,5 +90,12 @@ extension Bool: Encodable {
 extension Int: Encodable {
     public func toJson() -> JSValue {
         return JSValue(Double(self))
+    }
+}
+
+extension Array where Iterator.Element == String {
+    public func toJson() -> JSValue {
+        let content = self.joined(separator: ",")
+        return JSValue("[\(content)]")
     }
 }

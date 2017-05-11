@@ -33,80 +33,61 @@ public struct WorkspaceClientCapabilites {
 }
 
 public struct ServerCapabilities {
-	 /// Defines how text documents are synced. Is either a detailed structure defining each
-	 /// notification or for backwards compatibility the `TextDocumentSyncKind` number.
-	 public var textDocumentSync: TextDocumentSyncOptions?
+	/// Defines how text documents are synced. Is either a detailed structure defining each
+	/// notification or for backwards compatibility the `TextDocumentSyncKind` number.
+	public var textDocumentSync: TextDocumentSyncOptions?
 
-	// /**
-	//  * The server provides hover support.
-	//  */
-	// hoverProvider?: boolean;
-	// /**
-	//  * The server provides completion support.
-	//  */
-	// completionProvider?: CompletionOptions;
-	// /**
-	//  * The server provides signature help support.
-	//  */
-	// signatureHelpProvider?: SignatureHelpOptions;
-	// /**
-	//  * The server provides goto definition support.
-	//  */
-	// definitionProvider?: boolean;
-	// /**
-	//  * The server provides find references support.
-	//  */
-	// referencesProvider?: boolean;
-	// /**
-	//  * The server provides document highlight support.
-	//  */
-	// documentHighlightProvider?: boolean;
-	// /**
-	//  * The server provides document symbol support.
-	//  */
-	// documentSymbolProvider?: boolean;
-	// /**
-	//  * The server provides workspace symbol support.
-	//  */
-	// workspaceSymbolProvider?: boolean;
-	// /**
-	//  * The server provides code actions.
-	//  */
-	// codeActionProvider?: boolean;
-	// /**
-	//  * The server provides code lens.
-	//  */
-	// codeLensProvider?: CodeLensOptions;
-	// /**
-	//  * The server provides document formatting.
-	//  */
-	// documentFormattingProvider?: boolean;
-	// /**
-	//  * The server provides document range formatting.
-	//  */
-	// documentRangeFormattingProvider?: boolean;
-	// /**
-	//  * The server provides document formatting on typing.
-	//  */
-	// documentOnTypeFormattingProvider?: DocumentOnTypeFormattingOptions;
-	// /**
-	//  * The server provides rename support.
-	//  */
-	// renameProvider?: boolean;
-	// /**
-	//  * The server provides document link support.
-	//  */
-	// documentLinkProvider?: DocumentLinkOptions;
-	// /**
-	//  * The server provides execute command support.
-	//  */
-	// executeCommandProvider?: ExecuteCommandOptions;
-	// /**
-	//  * Experimental server capabilities.
-	//  */
-	// experimental?: any;
+    /// The server provides hover support.
+    public var hoverProvider: Bool?
+
+    /// The server provides completion support.
+    public var completionProvider: CompletionOptions?
+
+    /// The server provides signature help support.
+    public var signatureHelpProvider: SignatureHelpOptions?
+
+    /// The server provides goto definition support.
+    public var definitionProvider: Bool?
+
+    /// The server provides find references support.
+    public var referencesProvider: Bool?
+
+    /// The server provides document highlight support.
+    public var documentHighlightProvider: Bool?
+
+    /// The server provides document symbol support.
+    public var documentSymbolProvider: Bool?
+
+    /// The server provides workspace symbol support.
+    public var workspaceSymbolProvider: Bool?
+
+    /// The server provides code actions.
+    public var codeActionProvider: Bool?
+
+    /// The server provides code lens.
+    public var codeLensProvider: CodeLensOptions?
+
+    /// The server provides document formatting.
+    public var documentFormattingProvider: Bool?
+
+    /// The server provides document range formatting.
+    public var documentRangeFormattingProvider: Bool?
+
+    /// The server provides document formatting on typing.
+    public var documentOnTypeFormattingProvider: DocumentOnTypeFormattingOptions?
+
+    /// The server provides rename support.
+    public var renameProvider: Bool?
+
+    /// The server provides document link support.
+    public var documentLinkProvider: DocumentLinkOptions?
+
+    /// The server provides execute command support.
+    public var executeCommandProvider: ExecuteCommandOptions?
+
+    /// Experimental server capabilities.
+    public var experimental: Any?
 }
-
 
 public struct TextDocumentSyncOptions {
 	/// Open and close notifications are sent to the server.
@@ -144,6 +125,36 @@ public enum TextDocumentSyncKind: Int {
 	case incremental = 2
 }
 
+/// The options to dictate how completion triggers should work.
+public struct CompletionOptions {
+	/// The server provides support to resolve additional information for a completion item.
+	public var resolveProvider: Bool?
+
+	/// The characters that trigger completion automatically.
+	public var triggerCharacters: [String]?
+}
+
+public struct CodeLensOptions {
+	public var resolveProvider: Bool?
+}
+
+public struct SignatureHelpOptions {
+	public var triggerCharacters: [String]?
+}
+
+public struct DocumentOnTypeFormattingOptions {
+	public var firstTriggerCharacter: String
+	public var moreTriggerCharacter: [String]?
+}
+
+public struct DocumentLinkOptions {
+	public var resolveProvider: Bool?
+}
+
+public struct ExecuteCommandOptions {
+	public var commands: [String]?
+}
+
 
 // MARK: Serialization
 
@@ -156,4 +167,41 @@ extension ClientCapabilities: Decodable {
 
 extension ServerCapabilities: Encodable {}
 extension TextDocumentSyncOptions: Encodable {}
-extension TextDocumentSyncKind: Encodable {}
+
+extension TextDocumentSyncKind: Encodable {
+	public func toJson() -> JSValue {
+		return JSValue(Double(self.rawValue))
+	}
+}
+
+extension CompletionOptions: Encodable {
+	public func toJson() -> JSValue {
+		var json: JSValue = [:]
+		if let provider = self.resolveProvider {
+			json["resolveProvider"] = JSValue(provider)
+		}
+
+		if let triggers = self.triggerCharacters {
+			json["triggerCharacters"] = JSValue(triggers.joined(separator: ", "))
+		}
+
+		return json
+	}
+}
+
+extension CodeLensOptions: Encodable {}
+
+extension SignatureHelpOptions: Encodable {
+	public func toJson() -> JSValue {
+		var json: JSValue = [:]
+		if let triggers = self.triggerCharacters {
+			json["triggerCharacters"] = JSValue(triggers.joined(separator: ", "))
+		}
+
+		return json
+	}
+}
+
+extension DocumentOnTypeFormattingOptions: Encodable {}
+extension DocumentLinkOptions: Encodable {}
+extension ExecuteCommandOptions: Encodable {}

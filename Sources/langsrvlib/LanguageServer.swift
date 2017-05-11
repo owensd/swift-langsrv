@@ -32,5 +32,7 @@ public protocol MessageProtocol {
 /// types... but that's a lot of duplication now for little benefit.
 public enum LanguageServerCommand {
     case initialize(requestId: RequestId?, params: InitializeParams)
+    case shutdown(requestId: RequestId?)
+    case exit
 }
 

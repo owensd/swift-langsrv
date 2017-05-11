@@ -12,6 +12,13 @@
 
 import JSONLib
 
+#if os(macOS)
+import os.log
+#endif
+
+@available(macOS 10.12, *)
+fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "LanguageServerProtocol")
+
 
 extension JSValue {
     var integer: Int? { 
@@ -44,6 +51,11 @@ public final class LanguageServerProtocol: MessageProtocol {
         if raw.characters.count > 0 {
             let message = try parse(message: raw)
 
+            if #available(macOS 10.12, *) {
+                os_log("parsed message length: %d", log: log, type: .default, message.header.contentLength)
+                os_log("parsed message data:\n%{public}@", log: log, type: .default, message.data)
+            }
+
             guard let json = JSValue.parse(message.data).value else {
                 throw "unable to parse the incoming message"
             }
@@ -55,6 +67,10 @@ public final class LanguageServerProtocol: MessageProtocol {
             switch json["method"] {
             case "initialize":
                 return .initialize(requestId: try RequestId.from(json: json["id"]), params: try InitializeParams.from(json: json["params"]))
+            case "shutdown":
+                return .shutdown(requestId: try RequestId.from(json: json["id"]))
+            case "exit":
+                return .exit
             default: throw "unhandled method \(json["method"].string ?? "no method")"
             }
         }

@@ -8,6 +8,6 @@ let package = Package(
         Target(name: "langsrv", dependencies: ["langsrvlib"])
     ],
     dependencies: [
-        .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 1, minor: 1)
+        .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 1, minor: 2)
     ]
 )

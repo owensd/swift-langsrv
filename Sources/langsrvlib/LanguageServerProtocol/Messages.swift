@@ -92,7 +92,7 @@ public enum RequestId {
 /// Any given `ResponseMessage` can either return a result or an error.
 public enum ResponseResult {
     /// The result to return back with the response.
-    case result(Encodable)
+    case result(Encodable?)
 
     /// The error to return back with the response.
     case error(code: Int, message: String, data: Encodable?)
@@ -135,7 +135,11 @@ extension ResponseMessage: Encodable {}
 extension ResponseResult: Encodable {
     public func toJson() -> JSValue {
         switch self {
-        case let .result(encodable): return encodable.toJson()
+        case let .result(encodable):
+            if let encodable = encodable {
+                return encodable.toJson()
+            }
+            return nil
         case let .error(code, message, data):
             var json: JSValue = [:]
             json["code"] = JSValue(Double(code))
@@ -144,6 +148,15 @@ extension ResponseResult: Encodable {
                 json["data"] = data.toJson()
             }
             return json
+        }
+    }
+}
+
+extension RequestId: Encodable {
+    public func toJson() -> JSValue {
+        switch self {
+        case let .number(value): return JSValue(Double(value))
+        case let .string(value): return JSValue(value)
         }
     }
 }
