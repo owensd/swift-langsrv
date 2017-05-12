@@ -9,7 +9,13 @@
         "langsrv",
         "jsonprc",
         "langsrvlib",
-        "swiftlangsrv"
+        "swiftlangsrv",
+        "errno",
+        "FILENO",
+        "inout",
+        "standardinputbuffer",
+        "params",
+        "stringify"
     ],
     // flagWords - list of words to be always considered incorrect
     // This is useful for offensive words and common spelling errors.

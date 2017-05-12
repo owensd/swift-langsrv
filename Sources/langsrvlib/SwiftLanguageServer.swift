@@ -6,6 +6,7 @@
  */
 
 import JSONLib
+import Foundation
 
 #if os(macOS)
 import os.log
@@ -14,34 +15,33 @@ import os.log
 @available(macOS 10.12, *)
 fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "SwiftLanguageServer")
 
-public final class SwiftLanguageServer {
+public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
     private var canExit = false
+    private var transport: TransportType
 
-    // Whew! Look at the value of this!
-    public init() {}
+    /// Initializes a new instance of a `SwiftLanguageServer`.
+    public init(transport: TransportType) {
+        self.transport = transport
+    }
 
-    /// Runs the language server. This waits for input via `stdin`, parses it, and then triggers
-    /// the appropriately registered handler. If no handler is found, then `unhandled` is triggered
-    /// with the contents of the message.
-    public func run(source: MessageSource, transport: MessageProtocol) -> Never {
+    /// Runs the language server. This waits for input via `source`, parses it, and then triggers
+    /// the appropriately registered handler.
+    public func run(source: InputBuffer) {
         if #available(macOS 10.12, *) {
             os_log("Starting the language server.", log: log, type: .default)
         }
 
-        setbuf(stdout, nil)
-
-        source.run() { buffer in
+        source.run() { message in
             if #available(macOS 10.12, *) {
-                os_log("message received: size=%d", log: log, type: .default, buffer.count)
-                os_log("message contents:\n%{public}@", log: log, type: .default, String(bytes: buffer, encoding: .utf8) ?? "<cannot convert>")
+                os_log("message received:\n%{public}@", log: log, type: .default, message.description)
             }
             do {
-                let message = try transport.translate(data: buffer)
+                let command = try self.transport.translate(message: message)
                 if #available(macOS 10.12, *) {
-                    os_log("message received: %{public}@", log: log, type: .default, buffer)
+                    os_log("message translated to command: %{public}@", log: log, type: .default, String(describing: command))
                 }
-                if let response = try process(command: message) {
+                if let response = try self.process(command: command) {
                     let json = response.toJson().stringify(nil)                        
                     let contentLength = json.characters.count
                     let header = "Content-Length: \(contentLength)\r\nContent-Type: application/vscode-jsonrpc; charset=utf8\r\n\r\n"
@@ -50,9 +50,7 @@ public final class SwiftLanguageServer {
                     if #available(macOS 10.12, *) {
                         os_log("response sent:\n%{public}@", log: log, type: .default, message)
                     }
-                    print(message, terminator: "")
-                    // fflush(stdout)
-                    //FileHandle.standardOutput.write(message.data(using: .utf8)!)
+                    FileHandle.standardOutput.write(message.data(using: .utf8)!)
                 }
             }
             catch {
@@ -61,6 +59,8 @@ public final class SwiftLanguageServer {
                 }
             }
         }
+
+        RunLoop.main.run()
     }
 
     private func process(command: LanguageServerCommand) throws -> ResponseMessage? {

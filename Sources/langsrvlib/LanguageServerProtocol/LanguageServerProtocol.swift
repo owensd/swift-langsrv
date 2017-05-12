@@ -20,227 +20,54 @@ import os.log
 fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "LanguageServerProtocol")
 
 
-extension JSValue {
-    var integer: Int? { 
-        if let number = self.number {
-            return Int(number)
-        }
-        return nil
-     }
-}
 
 /// This provides the complete implementation necessary to translate an incoming message to a
 /// `LanguageServiceCommand`.
 public final class LanguageServerProtocol: MessageProtocol {
-    /// The raw message content of the message coming into the system. This is the fully unverified,
-    /// not parsed, and unmodified content.
-    typealias RawMessage = String
+    /// The registration table for all of the commands that can be handled via this protocol.
+    public var protocols: [String:(JSValue) throws -> LanguageServerCommand] = [:]
 
-    /// The fully parsed, but not necessarily validated, message that will be plumbed through to the
-    /// various message handlers.
-    typealias ParsedMessage = JSValue
-
-    /// Whew! Look at the value of this!
-    public init() {}
+    /// Creates a new instance of the `LanguageServerProtocol`.
+    public init() {
+        protocols["initialize"] = parse(initialize:)
+        protocols["shutdown"] = parse(shutdown:)
+        protocols["exit"] = parse(exit:)
+    }
 
     /// This is used to convert the raw incoming message to a `LanguageServerCommand`. The internals
     /// handle the JSON-RPC mechanism, but that doesn't need to be exposed.
-    public func translate(data: MessageData) throws-> LanguageServerCommand {
-        var buffer = data
-        let raw = String(cString: &buffer)
-        if raw.characters.count > 0 {
-            let message = try parse(message: raw)
-
-            if #available(macOS 10.12, *) {
-                os_log("parsed message length: %d", log: log, type: .default, message.header.contentLength)
-                os_log("parsed message data:\n%{public}@", log: log, type: .default, message.data)
-            }
-
-            guard let json = JSValue.parse(message.data).value else {
-                throw "unable to parse the incoming message"
-            }
+    public func translate(message: Message) throws-> LanguageServerCommand {
+        guard let json = JSValue.parse(message.content).value else {
+            throw "unable to parse the incoming message"
+        }
             
-            if json["jsonrpc"] != "2.0" {
-                throw "The only 'jsonrpc' value supported is '2.0'."
-            }
-            
-            switch json["method"] {
-            case "initialize":
-                return .initialize(requestId: try RequestId.from(json: json["id"]), params: try InitializeParams.from(json: json["params"]))
-            case "shutdown":
-                return .shutdown(requestId: try RequestId.from(json: json["id"]))
-            case "exit":
-                return .exit
-            default: throw "unhandled method \(json["method"].string ?? "no method")"
-            }
+        if json["jsonrpc"] != "2.0" {
+            throw "The only 'jsonrpc' value supported is '2.0'."
         }
 
-        throw "invalid message length"
-    }
-}
-
-/// All valid messages coming in will have a header that is a prefix to the content of the incoming
-/// message data. A valid header will have all of this data, though some may be defaulted. In
-/// addition, fields like `contentType` and `charset` must be specific values to be supported by
-/// this system.
-struct MessageHeader {
-    /// The number of bytes that the data region of the message occupies.
-    var contentLength: Int
-
-    /// The mechanism that describes how the data region is structured. This defaults to `.jsonrpc`.
-    var contentType: ContentType
-
-    /// The way the data in the region is encoded. This defaults to `.utf8`.
-    var encodingType: EncodingType
-
-    /// The supported data region encoding types.
-    enum ContentType: String {
-        case jsonrpc = "application/vscode-jsonrpc"
-    }
-
-    /// The supported data encoding format.
-    enum EncodingType: String {
-        case utf8 = "utf-8"
-    }
-}
-
-extension MessageHeader {
-    init(length: Int = 0, type: ContentType = .jsonrpc, encodingType: EncodingType = .utf8) {
-        self.contentLength = length
-        self.contentType = type
-        self.encodingType = encodingType
-    }
-}
-
-extension MessageHeader.ContentType {
-    static func from(string: String?) -> MessageHeader.ContentType? {
-        if let value = string?.lowercased() {
-            return value == MessageHeader.ContentType.jsonrpc.rawValue ? .jsonrpc : nil
+        guard let method = json["method"].string else {
+            throw "A message is required to have a `method` parameter."
         }
 
-        return nil
-    }
-}
-
-extension MessageHeader.EncodingType {
-    static func from(string: String?) -> MessageHeader.EncodingType? {
-        // Note(owensd): For backwards compatibility, "utf8" is also supported.
-        switch string?.lowercased() {
-            case MessageHeader.EncodingType.utf8.rawValue?: return .utf8
-            case "utf8"?: return .utf8
-            default: return nil
-        }
-    }
-}
-
-struct RawMessage {
-    var header: MessageHeader
-    var data: String
-}
-
-func parse(message data: String) throws -> RawMessage {
-    enum ParserState {
-        case header
-        case body
-    }
-    var header = ""
-    var body = ""
-    var state = ParserState.header
-
-    var newLineCount = 0
-    for c in data.characters {
-        if c == "\r\n" || c == "\r" || c == "\n" {
-            newLineCount += 1
-        }
-
-        switch state {
-            case .header:
-                header += "\(c)"
-                if newLineCount == 2 {
-                    state = .body
-                }
-
-            case .body: body += "\(c)"
-        }
-    }
-
-    let parsedHeader = try parse(header: header)
-    guard let parsedData = parse(body: body) else {
-        throw "unable to parse the body"
-    }
-
-    return RawMessage(header: parsedHeader, data: parsedData)
-}
-
-func parse(header content: String) throws -> MessageHeader {
-    enum ParserState {
-        case name
-        case value
-        case separator
-    }
-
-    var values: [String:String] = [:]
-    var name = ""
-    var value = ""
-    var state = ParserState.name
-    var lastIndex = 0
-    for (n, c) in content.characters.enumerated() {
-        if c == ":" {
-            state = .separator
-        }
-        else if c == "\r\n" || c == "\r" || c == "\n" {
-            // We should be finished now that two consecutive newline constructs exist
-            if name == "" && value == "" {
-                lastIndex = n
-                break
-            }
-
-            state = .name
-            values[name.trimmingCharacters(in: .whitespaces)] = value.trimmingCharacters(in: .whitespaces)
-            name = ""
-            value = ""
+        if let parser = protocols[method] {
+            return try parser(json)
         }
         else {
-            switch state {
-                case .name:
-                    if c == "\n" || c == "\r" || c == "\r\n" || c == "\t" || c == " " {
-                        throw "there can be no whitespace in the name of a header variable"
-                    }
-                    name += "\(c)"
-                case .value: value += "\(c)"
-                case .separator:
-                    if c == " " {
-                        state = .value
-                    }
-            }
+            throw "unhandled method `\(method)`"
         }
     }
 
-    if lastIndex != content.characters.count - 1 {
-        throw "header must end with two consecutive newline constructs"
+    private func parse(initialize json: JSValue) throws -> LanguageServerCommand {
+        return .initialize(
+            requestId: try RequestId.from(json: json["id"]),
+            params: try InitializeParams.from(json: json["params"]))
     }
 
-    if values.count == 0 {
-        throw "no values were parsed from the header"
+    private func parse(shutdown json: JSValue) throws -> LanguageServerCommand {
+        return .shutdown(requestId: try RequestId.from(json: json["id"]))
     }
 
-    guard let length = Int(values["Content-Length"] ?? "0") else {
-        throw "missing the `Content-Length` parameter"
+    private func parse(exit json: JSValue) throws -> LanguageServerCommand {
+        return .exit
     }
-
-    if length <= 0 {
-        throw "the `Content-Length` must be greater than 0."
-    }
-
-    var header = MessageHeader(length: length)
-
-    if let contentType = MessageHeader.ContentType.from(string: values["Content-Type"]) {
-        header.contentType = contentType
-    }
-
-    return header
-}
-
-func parse(body: String) -> String? { 
-    return body
 }

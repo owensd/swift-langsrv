@@ -3,58 +3,71 @@
  * Licensed under the MIT License. See License in the project root for license information.
  */
 
-// NOTE(owensd): While Foundation has some of what we need, there is no guarantee that the items
-// will be implemented in any timely manner. In addition, if Windows support is taken, Foundation
-// will surely not be available.
 #if os(Linux)
     import Glibc
 #else
     import Darwin
+    import os.log
 #endif
 
+@available(macOS 10.12, *)
+fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "StandardInputBuffer")
 
 /// A message source that pulls data in from `stdin`.
-public final class StandardInputMessageSource: MessageSource {
+public final class StandardInputBuffer: InputBuffer {
+    /// Internal queue used to handle the message input source.
+    private var inputQueue = DispatchQueue(
+        label: "com.kiadstudios.swiftlangsrv.standardinputbuffer",
+        attributes: .concurrent
+    )
 
     /// Whew! Look at the value of this!
     public init() {}
 
-    /// Continuously monitors the `stdin`
-    /// SwiftBug(SR-2729) - This will cause a compiler warning for all conforming types.
-    public func run(received: ([UInt8]) -> ()) -> Never {
-        var input = fd_set()
+    /// Continuously monitors the `stdin`.
+    public func run(received: @escaping (Message) -> ()) {
+        inputQueue.async {
+            let messageBuffer = MessageBuffer()
+            var input = fd_set()
 
-        // NOTE(owensd): If you're reading this code... I'm sorry. I'm not 100% that this is
-        // actually correct. I *thought* that `read()` could potentially not read the full data,
-        // but, I cannot seem to find the documentation to verify that. In any case, this code
-        // is likely the most fragile part of the system...
+            while (true) {
+                zero(fd: &input)
+                set(descriptor: STDIN_FILENO, fd: &input)
 
-        while (true) {
-            zero(fd: &input)
-            set(descriptor: STDIN_FILENO, fd: &input)
+                let maxMessageSize = 8192
+                var buffer = [UInt8](repeating: 0, count: maxMessageSize)
 
-            let maxMessageSize = 8192
-            var buffer = Array<UInt8>(repeating: 0, count: maxMessageSize)
-
-            let result = select(STDIN_FILENO + 1, &input, nil, nil, nil)
-            if (result == -1) {
-                fatalError("*** error in select() ***")
-            }
-            else if (result > 0) {
-                let bytesRead = read(STDIN_FILENO, &buffer, maxMessageSize)
-                if bytesRead < 0 {
-                    fatalError("error reading data... fix it")
+                let result = select(STDIN_FILENO + 1, &input, nil, nil, nil)
+                if (result == -1) {
+                    fatalError("*** error in select() ***")
                 }
-                else if bytesRead > 0 {
-                    // Is this the best way to do this? /sigh
-                    let data = [UInt8](buffer.split(maxSplits: 1, whereSeparator: { $0 == 0 }).first!)
-                    received(data)
+                else if (result > 0) {
+                    let bytesRead = read(STDIN_FILENO, &buffer, maxMessageSize)
+                    if bytesRead < 0 {
+                        if #available(macOS 10.12, *) {
+                            os_log("unable to read from buffer: %d", log: log, type: .default, errno)
+                        }
+                        fatalError("Unable to read from the input buffer.")
+                    }
+                    else if bytesRead > 0 {
+                        let messages = messageBuffer.write(data: [UInt8](buffer[0..<bytesRead]))
+                        for message in messages {
+                            received(message)
+                        }
+                    }
                 }
-            }
-            else {
-                fatalError("no stdin present")
+                else {
+                    if #available(macOS 10.12, *) {
+                        os_log("unable to select on stdin: %d", log: log, type: .default, errno)
+                    }
+                    fatalError("no stdin present")
+                }
             }
         }
+    }
+
+    public func stop() {
+        inputQueue.suspend()
     }
 }
 

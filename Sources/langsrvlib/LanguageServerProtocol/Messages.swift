@@ -6,14 +6,14 @@
 import JSONLib
 
 /// A general message as defined by JSON-RPC. 
-public protocol Message {
+public protocol JsonRpcMessage {
     /// The language server protocol always uses "2.0" as the jsonrpc version.
     var jsonrpc: String { get }
 }
 
 /// A request message to describe a request between the client and the server. Every processed
 /// request must send a response back to the sender of the request.
-public struct RequestMessage<ParamsType: Decodable>: Message {
+public struct RequestMessage<ParamsType: Decodable>: JsonRpcMessage {
     /// The language server protocol always uses "2.0" as the jsonrpc version.
     public let jsonrpc: String = "2.0"
 
@@ -24,7 +24,7 @@ public struct RequestMessage<ParamsType: Decodable>: Message {
     /// The language server command method to be invoked.
     public var method: String
 
-    /// The paramaters for the message. 
+    /// The parameters for the message. 
     public var params: ParamsType
 
     /// Initializes a new `RequestMessage`. 
@@ -39,7 +39,7 @@ public struct RequestMessage<ParamsType: Decodable>: Message {
 /// receiver of a request still needs to return a response message to conform to the JSON RPC
 /// specification. The result property of the ResponseMessage should be set to `null` in this case
 /// to signal a successful request.
-public struct ResponseMessage: Message {
+public struct ResponseMessage: JsonRpcMessage {
     /// The language server protocol always uses "2.0" as the jsonrpc version.
     public let jsonrpc: String = "2.0"
 
@@ -64,7 +64,7 @@ public struct ResponseMessage: Message {
 
 /// A notification message. A processed notification message must not send a response back. They
 /// work like events.
-public struct NotificationMessage<ParamsType>: Message {
+public struct NotificationMessage<ParamsType>: JsonRpcMessage {
     /// The language server protocol always uses "2.0" as the jsonrpc version.
     public let jsonrpc: String = "2.0"
 

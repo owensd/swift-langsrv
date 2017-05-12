@@ -19,3 +19,9 @@ enum LogTool {
 func os_log(_ string: String, log: OSLog, type: LogTool, _ args: Any...) {}
 
 #endif
+
+extension Array {
+    public func at(_ index: Int) -> Element? {
+        return (index < self.count) ? self[index] : nil
+    }
+}

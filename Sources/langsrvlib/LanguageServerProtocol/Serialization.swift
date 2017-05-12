@@ -15,6 +15,15 @@ fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category:
 
 // NOTE(owensd): These two protocols should maybe move to the JSONLib library itself.
 
+extension JSValue {
+    var integer: Int? { 
+        if let number = self.number {
+            return Int(number)
+        }
+        return nil
+     }
+}
+
 public protocol Encodable {
     func toJson() -> JSValue
 }
