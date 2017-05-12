@@ -3,8 +3,6 @@
  * Licensed under the MIT License. See License in the project root for license information.
  */
 
-extension String: Error {}
-
 #if os(Linux)
 // These are simply no-op stubs for now.
 

@@ -7,6 +7,7 @@
 
 import JSONLib
 import Foundation
+import LanguageServerProtocol
 
 #if os(macOS)
 import os.log
@@ -79,13 +80,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) -> ResponseMessage {
         var capabilities = ServerCapabilities()
-        capabilities.textDocumentSync = TextDocumentSyncOptions(
-            openClose: true,
-            change: .full,
-            willSave: true,
-            willSaveWaitUntil: nil,
-            save: nil
-        )
+        capabilities.textDocumentSync = TextDocumentSyncOptions()
+        capabilities.textDocumentSync?.openClose = true
+        capabilities.textDocumentSync?.change = .full
+        capabilities.textDocumentSync?.willSave = true
+
         // capabilities.hoverProvider = true
         // capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
         // capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])

@@ -4,10 +4,11 @@
  */
 
 import langsrvlib
+import LanguageServerProtocol
 
 // Currently, the only supported language server protocol is `vscode-jsonrpc`.
 
 let inputBuffer = StandardInputBuffer()
-let jsonrpc = LanguageServerProtocol()
+let jsonrpc = JsonRpcProtocol()
 let langsrv = SwiftLanguageServer(transport: jsonrpc)
 langsrv.run(source: inputBuffer)
