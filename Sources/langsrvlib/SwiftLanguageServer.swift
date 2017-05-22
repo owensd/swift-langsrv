@@ -28,7 +28,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     /// Runs the language server. This waits for input via `source`, parses it, and then triggers
     /// the appropriately registered handler.
-    public func run(source: InputBuffer) {
+    public func run(source: InputOutputBuffer) {
         if #available(macOS 10.12, *) {
             os_log("Starting the language server.", log: log, type: .default)
         }
@@ -42,50 +42,42 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
                 if #available(macOS 10.12, *) {
                     os_log("message translated to command: %{public}@", log: log, type: .default, String(describing: command))
                 }
-                if let response = try self.process(command: command) {
-                    let json = response.toJson().stringify(nil)                        
-                    let contentLength = json.characters.count
-                    let header = "Content-Length: \(contentLength)\r\nContent-Type: application/vscode-jsonrpc; charset=utf8\r\n\r\n"
-                    let message = "\(header)\(json)"
 
-                    if #available(macOS 10.12, *) {
-                        os_log("response sent:\n%{public}@", log: log, type: .default, message)
-                    }
-                    FileHandle.standardOutput.write(message.data(using: .utf8)!)
-                }
+                guard let response = try self.process(command: command, transport: self.transport) else { return nil }
+                return try self.transport.translate(response: response)
             }
             catch {
                 if #available(macOS 10.12, *) {
                     os_log("unable to convert message into a command: %{public}@", log: log, type: .default, String(describing: error))
                 }
             }
+
+            return nil
         }
 
         RunLoop.main.run()
     }
 
-    private func process(command: LanguageServerCommand) throws -> ResponseMessage? {
+    private func process(command: LanguageServerCommand, transport: TransportType) throws -> LanguageServerResponse? {
         switch command {
-        case let .initialize(requestId, params):
-            guard let requestId = requestId else { throw "method `initialize` requires a request ID" }
-            return doInitialize(requestId, params)
+        case let .initialize(requestId, params): return try doInitialize(requestId, params)
+        case let .shutdown(requestId): return try doShutdown(requestId)
+        case .exit: doExit()
 
-        case let .shutdown(requestId):
-            guard let requestId = requestId else { throw "method `shutdown` requires a request ID" }
-            return doShutdown(requestId)
-
-        case .exit: doExit(); return nil
+        default: throw "command is not supported: \(command)"
         }
+
+        return nil
     }
 
-    private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) -> ResponseMessage {
+    private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) throws -> LanguageServerResponse {
         var capabilities = ServerCapabilities()
         capabilities.textDocumentSync = TextDocumentSyncOptions()
-        capabilities.textDocumentSync?.openClose = true
-        capabilities.textDocumentSync?.change = .full
-        capabilities.textDocumentSync?.willSave = true
+        // capabilities.textDocumentSync?.openClose = true
+        // capabilities.textDocumentSync?.change = .full
+        // capabilities.textDocumentSync?.willSave = true
 
-        // capabilities.hoverProvider = true
+        capabilities.hoverProvider = true
         // capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
         // capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
         // capabilities.definitionProvider = true
@@ -101,12 +93,12 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         // capabilities.renameProvider = true
         // capabilities.documentLinkProvider = DocumentLinkOptions(resolveProvider: false)
 
-        return ResponseMessage(id: requestId, result: .result(InitializeResult(capabilities: capabilities)))
+        return .initialize(requestId: requestId, result: InitializeResult(capabilities: capabilities))
     }
 
-    private func doShutdown(_ requestId: RequestId) -> ResponseMessage {
+    private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
         canExit = true
-        return ResponseMessage(id: requestId, result: .result(nil))
+        return .shutdown(requestId: requestId)
     }
 
     private func doExit() {
