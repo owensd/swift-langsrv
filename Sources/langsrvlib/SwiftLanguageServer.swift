@@ -59,23 +59,30 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func process(command: LanguageServerCommand, transport: TransportType) throws -> LanguageServerResponse? {
+        
+        var response: LanguageServerResponse? = nil
+
         switch command {
-        case let .initialize(requestId, params): return try doInitialize(requestId, params)
+        case .initialize(let requestId, let params): response = try doInitialize(requestId, params)
+        case .initialized: response = try doInitialized()
+        
+        case .workspaceDidChangeConfiguration(let params): try doWorkspaceDidChangeConfiguration(params)
+
         case let .shutdown(requestId): return try doShutdown(requestId)
         case .exit: doExit()
 
         default: throw "command is not supported: \(command)"
         }
 
-        return nil
+        return response
     }
 
     private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) throws -> LanguageServerResponse {
         var capabilities = ServerCapabilities()
-        capabilities.textDocumentSync = TextDocumentSyncOptions()
-        // capabilities.textDocumentSync?.openClose = true
-        // capabilities.textDocumentSync?.change = .full
-        // capabilities.textDocumentSync?.willSave = true
+        capabilities.textDocumentSync = TextDocumentSyncOptions(
+            openClose: true,
+            change: .full,
+            willSave: true)
 
         capabilities.hoverProvider = true
         // capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
@@ -94,6 +101,14 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         // capabilities.documentLinkProvider = DocumentLinkOptions(resolveProvider: false)
 
         return .initialize(requestId: requestId, result: InitializeResult(capabilities: capabilities))
+    }
+
+    private func doInitialized() throws -> LanguageServerResponse? {
+        // TODO(owensd): get this party started.
+        return nil
+    }
+
+    private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
     }
 
     private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
