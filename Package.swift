@@ -5,11 +5,11 @@ import PackageDescription
 let package = Package(
     name: "swiftlangsrv",
     targets: [
-        Target(name: "langsrv", dependencies: ["langsrvlib"])
+        Target(name: "langsrv", dependencies: ["langsrvlib"]),
+        Target(name: "langsrvlib", dependencies: ["sourcekitd"])
     ],
     dependencies: [
         .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 2, minor: 0),
-        .Package(url: "https://github.com/owensd/swift-lsp.git", majorVersion: 0, minor: 17),
-        .Package(url: "https://github.com/jpsim/SourceKitten.git", majorVersion: 0, minor: 17)
+        .Package(url: "https://github.com/owensd/swift-lsp.git", majorVersion: 0, minor: 19)
     ]
 )
