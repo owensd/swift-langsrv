@@ -8,6 +8,7 @@
 import JSONLib
 import Foundation
 import LanguageServerProtocol
+import SourceKittenFramework
 
 #if os(macOS)
 import os.log
@@ -20,6 +21,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
     private var canExit = false
     private var transport: TransportType
+
+    // cached goodness... maybe abstract this.
+    private var openDocuments: [DocumentUri:String] = [:]
+    private var moduleName: String!
+    private var projectPath: String!
 
     /// Initializes a new instance of a `SwiftLanguageServer`.
     public init(transport: TransportType) {
@@ -65,11 +71,14 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         switch command {
         case .initialize(let requestId, let params): response = try doInitialize(requestId, params)
         case .initialized: response = try doInitialized()
+        case let .shutdown(requestId): return try doShutdown(requestId)
+        case .exit: doExit()
         
         case .workspaceDidChangeConfiguration(let params): try doWorkspaceDidChangeConfiguration(params)
 
-        case let .shutdown(requestId): return try doShutdown(requestId)
-        case .exit: doExit()
+        case .textDocumentDidOpen(let params): try doDocumentDidOpen(params)
+        case .textDocumentDidChange(let params): try doDocumentDidChange(params)
+        case .textDocumentCompletion(let requestId, let params): return try doCompletion(requestId, params)
 
         default: throw "command is not supported: \(command)"
         }
@@ -78,14 +87,34 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) throws -> LanguageServerResponse {
-        var capabilities = ServerCapabilities()
-        capabilities.textDocumentSync = TextDocumentSyncOptions(
-            openClose: true,
-            change: .full,
-            willSave: true)
+        // TODO(owensd): Need to actually get the version of Swift that the workspace is using based on the OS.
+        projectPath = params.rootPath!
+        let includePath = "/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/lib/swift/pm"
+        let packagePath = "\(projectPath!)/Package.swift"
+        let swiftPath = "/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/bin/swift"
+        let output = shell(
+            tool: swiftPath,
+            arguments: ["-I", includePath, "-L", includePath, "-lPackageDescription", packagePath, "-fileno", "1"],
+            currentDirectory: projectPath)
+            
+        if #available(macOS 10.12, *) {
+            os_log("successfully read %{public}@: %{public}@", log: log, type: .default, packagePath, output)
+        }
 
+        let packageJson = try JSValue.parse(output)
+        if #available(macOS 10.12, *) {
+            os_log("successfully parsed Package.swift.", log: log, type: .default)
+        }
+
+        moduleName = packageJson["package"]["name"].string!
+        if #available(macOS 10.12, *) {
+            os_log("module name parsed from Package.swift: %{public}@", log: log, type: .default, moduleName)
+        }
+
+        var capabilities = ServerCapabilities()
+        capabilities.textDocumentSync = .kind(.full)
         capabilities.hoverProvider = true
-        // capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
+        capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
         // capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
         // capabilities.definitionProvider = true
         // capabilities.referencesProvider = true
@@ -118,6 +147,70 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     private func doExit() {
         exit(canExit ? 0 : 1)
+    }
+
+
+    private func doDocumentDidOpen(_ params: DidOpenTextDocumentParams) throws {
+        if #available(macOS 10.12, *) {
+            os_log("command: documentDidOpen - %{public}@", log: log, type: .default, params.textDocument.uri)
+        }
+        openDocuments[params.textDocument.uri] = params.textDocument.text
+
+    }
+
+    private func doDocumentDidChange(_ params: DidChangeTextDocumentParams) throws {
+        if #available(macOS 10.12, *) {
+            os_log("command: documentDidChange - %{public}@", log: log, type: .default, params.textDocument.uri)
+        }
+        openDocuments[params.textDocument.uri] = params.contentChanges.reduce("") { $0 + $1.text }
+    }
+
+    private func doCompletion(_ requestId: RequestId, _ params: TextDocumentPositionParams) throws -> LanguageServerResponse {
+        let uri = params.textDocument.uri
+
+        func calculateOffset(in content: String, line: Int, character: Int) -> Int64 {
+            var lineCounter = 0
+            var characterCounter = 0
+
+            for (idx, c) in content.characters.enumerated() {
+                if lineCounter == line && characterCounter == character { return Int64(idx) }
+                if c == "\n" || c == "\r\n" {
+                    lineCounter += 1
+                    characterCounter = 0
+                }
+                else {
+                    characterCounter += 1
+                }
+            }
+
+            return 0
+        }
+
+        guard let content = openDocuments[uri] else {
+            throw "attempting to do completion on an unopened document? \(uri)"
+        }
+        let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
+
+        if #available(macOS 10.12, *) {
+            os_log("content:\n%{public}@", log: log, type: .default, content)
+            os_log("calculated offset: %d, line: %d, character: %d", log: log, type: .default, offset, params.position.line, params.position.character)
+        }
+
+        let completionItems = CodeCompletionItem.parse(response:
+            Request.codeCompletionRequest(file: uri, contents: "", offset: offset,
+                arguments: ["-c", uri, "-sdk", sdkPath()]).send())
+        
+        let completionList = CompletionList(
+            isIncomplete: false,
+            items: completionItems.map {
+                CompletionItem(
+                    label: $0.name ?? "<no name>",
+                    kind: .function,
+                    detail: $0.typeName)
+            }
+        )
+
+        return .textDocumentCompletion(requestId: requestId, result: .completionList(completionList))
     }
 }
 

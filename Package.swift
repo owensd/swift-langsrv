@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .Package(url: "https://github.com/owensd/json-swift.git", majorVersion: 2, minor: 0),
-        .Package(url: "https://github.com/owensd/swift-lsp.git", majorVersion: 0, minor: 17),
+        .Package(url: "https://github.com/owensd/swift-lsp.git", majorVersion: 0, minor: 19),
         .Package(url: "https://github.com/jpsim/SourceKitten.git", majorVersion: 0, minor: 17)
     ]
 )
