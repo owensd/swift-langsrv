@@ -35,7 +35,6 @@ public func shell(tool toolPath: String, arguments: [String], currentDirectory: 
     process.standardOutput = output
     if let cwd = currentDirectory { process.currentDirectoryPath = cwd }
     process.launch()
-    process.waitUntilExit()
 
     return String(
         data: output.fileHandleForReading.readDataToEndOfFile(),

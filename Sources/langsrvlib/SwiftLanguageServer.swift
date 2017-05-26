@@ -8,7 +8,6 @@
 import JSONLib
 import Foundation
 import LanguageServerProtocol
-import SourceKittenFramework
 
 #if os(macOS)
 import os.log
@@ -17,6 +16,7 @@ import os.log
 @available(macOS 10.12, *)
 fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "SwiftLanguageServer")
 
+
 public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
     private var canExit = false
@@ -24,8 +24,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     // cached goodness... maybe abstract this.
     private var openDocuments: [DocumentUri:String] = [:]
-    private var moduleName: String!
     private var projectPath: String!
+    private var languageServerPath: String!
+    private var sourcekittenPath: String!
+    private var swiftVersion: String!
+
 
     /// Initializes a new instance of a `SwiftLanguageServer`.
     public init(transport: TransportType) {
@@ -65,7 +68,6 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func process(command: LanguageServerCommand, transport: TransportType) throws -> LanguageServerResponse? {
-        
         var response: LanguageServerResponse? = nil
 
         switch command {
@@ -87,29 +89,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doInitialize(_ requestId: RequestId, _ params: InitializeParams) throws -> LanguageServerResponse {
-        // TODO(owensd): Need to actually get the version of Swift that the workspace is using based on the OS.
         projectPath = params.rootPath!
-        let includePath = "/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/lib/swift/pm"
-        let packagePath = "\(projectPath!)/Package.swift"
-        let swiftPath = "/Library/Developer/Toolchains/swift-latest.xctoolchain/usr/bin/swift"
-        let output = shell(
-            tool: swiftPath,
-            arguments: ["-I", includePath, "-L", includePath, "-lPackageDescription", packagePath, "-fileno", "1"],
-            currentDirectory: projectPath)
-            
-        if #available(macOS 10.12, *) {
-            os_log("successfully read %{public}@: %{public}@", log: log, type: .default, packagePath, output)
-        }
-
-        let packageJson = try JSValue.parse(output)
-        if #available(macOS 10.12, *) {
-            os_log("successfully parsed Package.swift.", log: log, type: .default)
-        }
-
-        moduleName = packageJson["package"]["name"].string!
-        if #available(macOS 10.12, *) {
-            os_log("module name parsed from Package.swift: %{public}@", log: log, type: .default, moduleName)
-        }
 
         var capabilities = ServerCapabilities()
         capabilities.textDocumentSync = .kind(.full)
@@ -138,6 +118,21 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
+        let settings = params.settings["swift-langsrv"]
+        guard let skPath = settings["sourcekittenPath"].string else {
+            throw "The path to SourceKitten must be set."
+        }
+        sourcekittenPath = skPath
+
+        languageServerPath = settings["languageServerPath"].string ?? ""
+        swiftVersion = settings["swiftVersion"].string ?? "latest"
+
+        if #available(macOS 10.12, *) {
+            os_log("configuration: sourcekittenPath set to %{public}@", log: log, type: .default, sourcekittenPath)
+            os_log("configuration: languageServerPath set to %{public}@", log: log, type: .default, languageServerPath)
+            os_log("configuration: swiftVersion set to %{public}@", log: log, type: .default, swiftVersion)
+        }
+
     }
 
     private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
@@ -196,21 +191,41 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             os_log("calculated offset: %d, line: %d, character: %d", log: log, type: .default, offset, params.position.line, params.position.character)
         }
 
-        let completionItems = CodeCompletionItem.parse(response:
-            Request.codeCompletionRequest(file: uri, contents: "", offset: offset,
-                arguments: ["-c", uri, "-sdk", sdkPath()]).send())
+        let result = try sourcekitten(completion: content, offset: offset, uri: URL(string: uri)!.path)
+        if #available(macOS 10.12, *) {
+            os_log("sourcekitten response:\n%{public}@", log: log, type: .default, result.stringify())
+        }
         
         let completionList = CompletionList(
             isIncomplete: false,
-            items: completionItems.map {
+            items: result.array!.map {
                 CompletionItem(
-                    label: $0.name ?? "<no name>",
+                    label: $0["descriptionKey"].string ?? "",
                     kind: .function,
-                    detail: $0.typeName)
+                    documentation: $0["docBrief"].string ?? ""
+                )
             }
         )
 
         return .textDocumentCompletion(requestId: requestId, result: .completionList(completionList))
+    }
+
+    private func sourcekitten(completion content: String, offset: Int64, uri: DocumentUri) throws -> JSValue {
+        // TODO(owensd): This currently only works for Sources/<Module>; it won't work for flat Sources.
+        let components = uri.components(separatedBy: "/")
+        let index = components.index(of: "Sources")!
+        let module = components[index + 1]
+
+        let output = shell(
+            tool: sourcekittenPath,
+            arguments: ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module],
+            currentDirectory: projectPath)
+
+        if #available(macOS 10.12, *) {
+            os_log("response from sourcekitten:\n%{public}@", log: log, type: .default, output)
+        }
+
+        return try JSValue.parse(output)
     }
 }
 
