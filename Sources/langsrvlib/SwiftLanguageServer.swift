@@ -25,9 +25,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     // cached goodness... maybe abstract this.
     private var openDocuments: [DocumentUri:String] = [:]
     private var projectPath: String!
-    private var languageServerPath: String!
+
+    // Settings that are not updated until a workspaceDidChangeConfiguration request comes in.
     private var sourcekittenPath: String!
-    private var swiftVersion: String!
+    private var toolchainPath: String!
+    private var packageName: String!
 
 
     /// Initializes a new instance of a `SwiftLanguageServer`.
@@ -119,20 +121,45 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
         let settings = params.settings["swift-langsrv"]
-        guard let skPath = settings["sourcekittenPath"].string else {
+
+        guard let toolchainPath = settings["toolchainPath"].string else {
+            throw "The path to the Toolchain must be set."
+        }
+        self.toolchainPath = toolchainPath
+
+        let packagePath = "\(projectPath!)/Package.swift"
+        let includePath = "\(toolchainPath)/usr/lib/swift/pm"
+        let swiftPath = "\(toolchainPath)/usr/bin/swift"
+        let output = shell(
+            tool: swiftPath,
+            arguments: ["-I", includePath, "-L", includePath, "-lPackageDescription", packagePath, "-fileno", "1"],
+            currentDirectory: projectPath)
+
+        if #available(macOS 10.12, *) {
+            os_log("successfully read %{public}@: %{public}@", log: log, type: .default, packagePath, output)
+        }
+        
+        let packageJson = try JSValue.parse(output)
+        if #available(macOS 10.12, *) {
+            os_log("successfully parsed Package.swift.", log: log, type: .default)
+        }
+ 	  
+        packageName = packageJson["package"]["name"].string!
+        if #available(macOS 10.12, *) {
+            os_log("package name parsed from Package.swift: %{public}@", log: log, type: .default, packageName)
+        }
+
+        guard let sourcekittenPath = settings["sourcekittenPath"].string else {
             throw "The path to SourceKitten must be set."
         }
-        sourcekittenPath = skPath
+        self.sourcekittenPath = sourcekittenPath
 
-        languageServerPath = settings["languageServerPath"].string ?? ""
-        swiftVersion = settings["swiftVersion"].string ?? "latest"
+        // TODO(owensd): handle targets...
 
         if #available(macOS 10.12, *) {
             os_log("configuration: sourcekittenPath set to %{public}@", log: log, type: .default, sourcekittenPath)
-            os_log("configuration: languageServerPath set to %{public}@", log: log, type: .default, languageServerPath)
-            os_log("configuration: swiftVersion set to %{public}@", log: log, type: .default, swiftVersion)
+            os_log("configuration: toolchainPath set to %{public}@", log: log, type: .default, toolchainPath)
         }
-
     }
 
     private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
@@ -143,7 +170,6 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private func doExit() {
         exit(canExit ? 0 : 1)
     }
-
 
     private func doDocumentDidOpen(_ params: DidOpenTextDocumentParams) throws {
         if #available(macOS 10.12, *) {
@@ -211,14 +237,18 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func sourcekitten(completion content: String, offset: Int64, uri: DocumentUri) throws -> JSValue {
-        // TODO(owensd): This currently only works for Sources/<Module>; it won't work for flat Sources.
         let components = uri.components(separatedBy: "/")
         let index = components.index(of: "Sources")!
-        let module = components[index + 1]
+        let module: String = components[index + 1].hasSuffix(".swift") ? packageName : components[index + 1]
+
+        let arguments =  ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module]
+        if #available(macOS 10.12, *) {
+            os_log("arguments to pass to sourcekitten:\n%{public}@", log: log, type: .default, arguments.joined(separator: " "))
+        }
 
         let output = shell(
             tool: sourcekittenPath,
-            arguments: ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module],
+            arguments: arguments,
             currentDirectory: projectPath)
 
         if #available(macOS 10.12, *) {
