@@ -8,7 +8,7 @@
 import Foundation
 import Glibc
 
-internal func log(_ message: String, category: String, _ args: Any...) {
+internal func log(_ message: StaticString, category: String, _ args: Any...) {
     // Implementation Note: This method is currently a big hack to just to get
     // any sort of logging output. This needs to get revamped and put into a 
     // file or something. Also, **VERY IMPORTANT**: the protocol talks over

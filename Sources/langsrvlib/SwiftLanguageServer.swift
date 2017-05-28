@@ -36,16 +36,16 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     public func run(source: InputOutputBuffer) {
         log("Starting the language server.", category: languageServerLogCategory)
         source.run() { message in
-            log("message received:\n%@", category: languageServerLogCategory, message.description)
+            log("message received:\n%{public}@", category: languageServerLogCategory, message.description)
             do {
                 let command = try self.transport.translate(message: message)
-                log("message translated to command: %@", category: languageServerLogCategory, String(describing: command))
+                log("message translated to command: %{public}@", category: languageServerLogCategory, String(describing: command))
 
                 guard let response = try self.process(command: command, transport: self.transport) else { return nil }
                 return try self.transport.translate(response: response)
             }
             catch {
-                log("unable to convert message into a command: %@", category: languageServerLogCategory, String(describing: error))
+                log("unable to convert message into a command: %{public}@", category: languageServerLogCategory, String(describing: error))
             }
 
             return nil
@@ -111,7 +111,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             throw "The path to the Toolchain must be set."
         }
         self.toolchainPath = toolchainPath
-        log("configuration: toolchainPath set to %@", category: languageServerLogCategory, toolchainPath)
+        log("configuration: toolchainPath set to %{public}@", category: languageServerLogCategory, toolchainPath)
 
         let packagePath = "\(projectPath!)/Package.swift"
         let includePath = "\(toolchainPath)/usr/lib/swift/pm"
@@ -121,19 +121,19 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             tool: swiftPath,
             arguments: ["-I", includePath, "-L", includePath, "-lPackageDescription", packagePath, "-fileno", "1"],
             currentDirectory: projectPath)
-        log("successfully read %@: %@", category: languageServerLogCategory, packagePath, output)
+        log("successfully read %{public}@: %{public}@", category: languageServerLogCategory, packagePath, output)
         
         let packageJson = try JSValue.parse(output)
         log("successfully parsed Package.swift.", category: languageServerLogCategory)
 
         packageName = packageJson["package"]["name"].string!
-        log("package name parsed from Package.swift: %@", category: languageServerLogCategory, packageName)
+        log("package name parsed from Package.swift: %{public}@", category: languageServerLogCategory, packageName)
 
         guard let sourcekittenPath = settings["sourcekittenPath"].string else {
             throw "The path to SourceKitten must be set."
         }
         self.sourcekittenPath = sourcekittenPath
-        log("configuration: sourcekittenPath set to %@", category: languageServerLogCategory, sourcekittenPath)
+        log("configuration: sourcekittenPath set to %{public}@", category: languageServerLogCategory, sourcekittenPath)
 
         // TODO(owensd): handle targets...
     }
@@ -148,12 +148,12 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doDocumentDidOpen(_ params: DidOpenTextDocumentParams) throws {
-        log("command: documentDidOpen - %@", category: languageServerLogCategory, params.textDocument.uri)
+        log("command: documentDidOpen - %{public}@", category: languageServerLogCategory, params.textDocument.uri)
         openDocuments[params.textDocument.uri] = params.textDocument.text
     }
 
     private func doDocumentDidChange(_ params: DidChangeTextDocumentParams) throws {
-        log("command: documentDidChange - %@", category: languageServerLogCategory, params.textDocument.uri)
+        log("command: documentDidChange - %{public}@", category: languageServerLogCategory, params.textDocument.uri)
         openDocuments[params.textDocument.uri] = params.contentChanges.reduce("") { $0 + $1.text }
     }
 
@@ -182,11 +182,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             throw "attempting to do completion on an unopened document? \(uri)"
         }
         let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
-        log("content:\n%@", category: languageServerLogCategory, content)
+        log("content:\n%{public}@", category: languageServerLogCategory, content)
         log("calculated offset: %d, line: %d, character: %d", category: languageServerLogCategory, offset, params.position.line, params.position.character)
 
         let result = try sourcekitten(completion: content, offset: offset, uri: URL(string: uri)!.path)
-        log("sourcekitten response:\n%@", category: languageServerLogCategory, result.stringify())
+        log("sourcekitten response:\n%{public}@", category: languageServerLogCategory, result.stringify())
         
         let completionList = CompletionList(
             isIncomplete: false,
@@ -208,13 +208,13 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         let module: String = components[index + 1].hasSuffix(".swift") ? packageName : components[index + 1]
 
         let arguments =  ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module, "--text", JSValue(content).stringify(nil)]
-        log("arguments to pass to sourcekitten:\n%@", category: languageServerLogCategory, arguments.joined(separator: " "))
+        log("arguments to pass to sourcekitten:\n%{public}@", category: languageServerLogCategory, arguments.joined(separator: " "))
 
         let output = shell(
             tool: sourcekittenPath,
             arguments: arguments,
             currentDirectory: projectPath)
-        log("response from sourcekitten:\n%@", category: languageServerLogCategory, output)
+        log("response from sourcekitten:\n%{public}@", category: languageServerLogCategory, output)
 
         return try JSValue.parse(output)
     }
