@@ -1,9 +1,26 @@
 {
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
-    "version": "0.1.0",
-    "command": "swift",
-    "isShellCommand": true,
-    "args": ["build"],
-    "showOutput": "always"
+    "windows": {
+        "version": "2.0.0",
+        "command": "C:\\Windows\\sysnative\\bash.exe",
+        "args": ["-c", "./Scripts/vscode-build.sh"],
+        "isShellCommand": true,
+        "showOutput": "always",
+        "echoCommand": true
+    },
+    "osx": {
+        "version": "2.0.0",
+        "command": "swift",
+        "isShellCommand": true,
+        "args": ["build"],
+        "showOutput": "always"
+    },
+    "linux": {
+        "version": "2.0.0",
+        "command": "swift",
+        "isShellCommand": true,
+        "args": ["build"],
+        "showOutput": "always"
+    }
 }

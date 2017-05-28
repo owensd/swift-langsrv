@@ -9,13 +9,7 @@ import JSONLib
 import Foundation
 import LanguageServerProtocol
 
-#if os(macOS)
-import os.log
-#endif
-
-@available(macOS 10.12, *)
-fileprivate let log = OSLog(subsystem: "com.kiadstudios.swiftlangsrv", category: "SwiftLanguageServer")
-
+let languageServerLogCategory = "SwiftLanguageServer"
 
 public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
@@ -40,27 +34,18 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     /// Runs the language server. This waits for input via `source`, parses it, and then triggers
     /// the appropriately registered handler.
     public func run(source: InputOutputBuffer) {
-        if #available(macOS 10.12, *) {
-            os_log("Starting the language server.", log: log, type: .default)
-        }
-
+        log("Starting the language server.", category: languageServerLogCategory)
         source.run() { message in
-            if #available(macOS 10.12, *) {
-                os_log("message received:\n%{public}@", log: log, type: .default, message.description)
-            }
+            log("message received:\n%@", category: languageServerLogCategory, message.description)
             do {
                 let command = try self.transport.translate(message: message)
-                if #available(macOS 10.12, *) {
-                    os_log("message translated to command: %{public}@", log: log, type: .default, String(describing: command))
-                }
+                log("message translated to command: %@", category: languageServerLogCategory, String(describing: command))
 
                 guard let response = try self.process(command: command, transport: self.transport) else { return nil }
                 return try self.transport.translate(response: response)
             }
             catch {
-                if #available(macOS 10.12, *) {
-                    os_log("unable to convert message into a command: %{public}@", log: log, type: .default, String(describing: error))
-                }
+                log("unable to convert message into a command: %@", category: languageServerLogCategory, String(describing: error))
             }
 
             return nil
@@ -126,40 +111,31 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             throw "The path to the Toolchain must be set."
         }
         self.toolchainPath = toolchainPath
+        log("configuration: toolchainPath set to %@", category: languageServerLogCategory, toolchainPath)
 
         let packagePath = "\(projectPath!)/Package.swift"
         let includePath = "\(toolchainPath)/usr/lib/swift/pm"
         let swiftPath = "\(toolchainPath)/usr/bin/swift"
+
         let output = shell(
             tool: swiftPath,
             arguments: ["-I", includePath, "-L", includePath, "-lPackageDescription", packagePath, "-fileno", "1"],
             currentDirectory: projectPath)
-
-        if #available(macOS 10.12, *) {
-            os_log("successfully read %{public}@: %{public}@", log: log, type: .default, packagePath, output)
-        }
+        log("successfully read %@: %@", category: languageServerLogCategory, packagePath, output)
         
         let packageJson = try JSValue.parse(output)
-        if #available(macOS 10.12, *) {
-            os_log("successfully parsed Package.swift.", log: log, type: .default)
-        }
- 	  
+        log("successfully parsed Package.swift.", category: languageServerLogCategory)
+
         packageName = packageJson["package"]["name"].string!
-        if #available(macOS 10.12, *) {
-            os_log("package name parsed from Package.swift: %{public}@", log: log, type: .default, packageName)
-        }
+        log("package name parsed from Package.swift: %@", category: languageServerLogCategory, packageName)
 
         guard let sourcekittenPath = settings["sourcekittenPath"].string else {
             throw "The path to SourceKitten must be set."
         }
         self.sourcekittenPath = sourcekittenPath
+        log("configuration: sourcekittenPath set to %@", category: languageServerLogCategory, sourcekittenPath)
 
         // TODO(owensd): handle targets...
-
-        if #available(macOS 10.12, *) {
-            os_log("configuration: sourcekittenPath set to %{public}@", log: log, type: .default, sourcekittenPath)
-            os_log("configuration: toolchainPath set to %{public}@", log: log, type: .default, toolchainPath)
-        }
     }
 
     private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
@@ -172,17 +148,12 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doDocumentDidOpen(_ params: DidOpenTextDocumentParams) throws {
-        if #available(macOS 10.12, *) {
-            os_log("command: documentDidOpen - %{public}@", log: log, type: .default, params.textDocument.uri)
-        }
+        log("command: documentDidOpen - %@", category: languageServerLogCategory, params.textDocument.uri)
         openDocuments[params.textDocument.uri] = params.textDocument.text
-
     }
 
     private func doDocumentDidChange(_ params: DidChangeTextDocumentParams) throws {
-        if #available(macOS 10.12, *) {
-            os_log("command: documentDidChange - %{public}@", log: log, type: .default, params.textDocument.uri)
-        }
+        log("command: documentDidChange - %@", category: languageServerLogCategory, params.textDocument.uri)
         openDocuments[params.textDocument.uri] = params.contentChanges.reduce("") { $0 + $1.text }
     }
 
@@ -211,16 +182,11 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
             throw "attempting to do completion on an unopened document? \(uri)"
         }
         let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
-
-        if #available(macOS 10.12, *) {
-            os_log("content:\n%{public}@", log: log, type: .default, content)
-            os_log("calculated offset: %d, line: %d, character: %d", log: log, type: .default, offset, params.position.line, params.position.character)
-        }
+        log("content:\n%@", category: languageServerLogCategory, content)
+        log("calculated offset: %d, line: %d, character: %d", category: languageServerLogCategory, offset, params.position.line, params.position.character)
 
         let result = try sourcekitten(completion: content, offset: offset, uri: URL(string: uri)!.path)
-        if #available(macOS 10.12, *) {
-            os_log("sourcekitten response:\n%{public}@", log: log, type: .default, result.stringify())
-        }
+        log("sourcekitten response:\n%@", category: languageServerLogCategory, result.stringify())
         
         let completionList = CompletionList(
             isIncomplete: false,
@@ -241,19 +207,14 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         let index = components.index(of: "Sources")!
         let module: String = components[index + 1].hasSuffix(".swift") ? packageName : components[index + 1]
 
-        let arguments =  ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module]
-        if #available(macOS 10.12, *) {
-            os_log("arguments to pass to sourcekitten:\n%{public}@", log: log, type: .default, arguments.joined(separator: " "))
-        }
+        let arguments =  ["complete", "--file", URL(string: uri)!.path, "--offset", "\(offset)", "--spm-module", module, "--text", JSValue(content).stringify(nil)]
+        log("arguments to pass to sourcekitten:\n%@", category: languageServerLogCategory, arguments.joined(separator: " "))
 
         let output = shell(
             tool: sourcekittenPath,
             arguments: arguments,
             currentDirectory: projectPath)
-
-        if #available(macOS 10.12, *) {
-            os_log("response from sourcekitten:\n%{public}@", log: log, type: .default, output)
-        }
+        log("response from sourcekitten:\n%@", category: languageServerLogCategory, output)
 
         return try JSValue.parse(output)
     }
