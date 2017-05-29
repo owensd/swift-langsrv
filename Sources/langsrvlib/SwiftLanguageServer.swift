@@ -105,7 +105,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
-        let settings = params.settings["swift-langsrv"]
+        let settings = (params.settings as! JSValue)["swift-langsrv"]
 
         guard let toolchainPath = settings["toolchainPath"].string else {
             throw "The path to the Toolchain must be set."
