@@ -10,8 +10,8 @@ matrix:
           sudo: required
 
 script:
-    - swift build
-    - swift test
+    - make debug
+    - make release
 
 before_install:
     - chmod ugo+x ./Scripts/InstallSwift.sh
