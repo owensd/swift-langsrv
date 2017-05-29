@@ -5,7 +5,11 @@ debug: generate-version
 	swift test -c debug
 
 release: generate-version
+ifeq ($(shell uname -s),Darwin)
 	swift build -c release -Xswiftc -static-stdlib
+else
+	swift build -c release
+endif
 	swift test -c release
 
 clean:
