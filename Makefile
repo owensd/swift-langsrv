@@ -7,10 +7,10 @@ debug: generate-version
 release: generate-version
 ifeq ($(shell uname -s),Darwin)
 	swift build -c release -Xswiftc -static-stdlib
+	swift test -c release
 else
 	swift build -c release
 endif
-	swift test -c release
 
 clean:
 	swift package clean
