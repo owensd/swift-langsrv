@@ -6,11 +6,10 @@
 import langsrvlib
 import LanguageServerProtocol
 import JsonRpcProtocol
-
-let version = "0.8.0"
+import VersionInfo
 
 if CommandLine.arguments.contains("-v") || CommandLine.arguments.contains("--version") {
-    print("Swift Language Server v\(version)")
+    print("Swift Language Server v\(VersionInfo.version)")
 }
 else {
     let inputBuffer = StandardInputOutputBuffer()
