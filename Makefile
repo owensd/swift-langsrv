@@ -15,4 +15,4 @@ generate-version:
 	./Scripts/genvers.sh
 
 tag:
-	echo git tag "v$(shell sed 's/^version: \(.*\)/\1/' ./Sources/VersionInfo/VersionInfo.yaml)"
+	git tag "v$(shell sed 's/^version: \(.*\)/\1/' ./Sources/VersionInfo/VersionInfo.yaml)"
