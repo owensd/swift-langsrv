@@ -6,7 +6,6 @@
 import langsrvlib
 import LanguageServerProtocol
 import JsonRpcProtocol
-import VersionInfo
 
 if CommandLine.arguments.contains("-v") || CommandLine.arguments.contains("--version") {
     print("Swift Language Server v\(VersionInfo.version)")
