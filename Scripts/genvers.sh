@@ -2,6 +2,7 @@
 
 VersionInfoPath=./Sources/langsrv/VersionInfo.swift
 VersionInfo=./VersionInfo.info
+Version=$(sed 's/^version: \(.*\)$/\1/' $VersionInfo)
 
 FileContents="/*
  * Copyright (c) Kiad Studios, LLC. All rights reserved.
@@ -9,10 +10,7 @@ FileContents="/*
  */
 
 public enum VersionInfo {
-    static public let version = \"\$VersionNumber\"
+    static public let version = \"$Version\"
 }"
 
 echo "$FileContents" > $VersionInfoPath
-
-Version=$(sed 's/^version: \(.*\)$/\1/' $VersionInfo)
-sed -i '' "s/\$VersionNumber/$Version/g" $VersionInfoPath
