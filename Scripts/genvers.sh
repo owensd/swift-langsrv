@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VersionInfoPath=./Sources/langsrv/VersionInfo.swift
-VersionInfo=./VersionInfo.info
+VersionInfo=./VersionInfo
 Version=$(sed 's/^version: \(.*\)$/\1/' $VersionInfo)
 
 FileContents="/*
