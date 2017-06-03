@@ -86,7 +86,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         capabilities.textDocumentSync = .kind(.full)
         capabilities.hoverProvider = true
         capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
-        // capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
+        capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
         // capabilities.definitionProvider = true
         // capabilities.referencesProvider = true
         // capabilities.documentHighlightProvider = true
@@ -173,8 +173,8 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
                     characterCounter += 1
                 }
             }
-
-            return 0
+            
+            return Int64(content.characters.count)
         }
 
         func kind(_ value: String?) -> CompletionItemKind {
@@ -231,7 +231,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         }
         let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
         log("content:\n%{public}@", category: languageServerLogCategory, content)
-        log("calculated offset: %d, line: %d, character: %d", category: languageServerLogCategory, offset, params.position.line, params.position.character)
+        log("calculated %{public}@", category: languageServerLogCategory, "offset: \(offset), line: \(params.position.line), character: \(params.position.character)")
 
         let result = try sourcekit(completion: content, offset: offset, uri: URL(string: uri)!.path)
         log("sourcekit response:\n%{public}@", category: languageServerLogCategory, result.stringify())
@@ -273,8 +273,8 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         }
 
         return
-            ["-module-name", module] +
             (try value(key: "sources")) +
+            ["-module-name", module] +
             (try value(key: "other-args")) +
             ["-I"] + (try value(key: "import-paths"))
     }
@@ -287,21 +287,22 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         let inputs = try inputsFor(module: module)
         log("sourcekitd: parsed compiler args: %{public}@", category: languageServerLogCategory, inputs)
 
-        var yaml = "key.request: source.request.codecomplete\n"
-        yaml += "key.offset: \(offset)\n"
-        yaml += "key.sourcefile: \"\(URL(string: uri)!.path)\"\n"
-        yaml += "key.compilerargs: \(inputs)\n"
-        yaml += "key.sourcetext: \(JSValue(content).stringify(nil))"
-        log("sourcekitd: request contents\n%{public}@", category: languageServerLogCategory, yaml)
+        let file = URL(string: uri)!.path
+        var compilerargs = inputs.map({ sourcekitd_request_string_create($0) })
+        let dict = [
+            sourcekitd_uid_get_from_cstr("key.request"): sourcekitd_request_uid_create(sourcekitd_uid_get_from_cstr("source.request.codecomplete")),
+            sourcekitd_uid_get_from_cstr("key.name"): sourcekitd_request_string_create(file),
+            sourcekitd_uid_get_from_cstr("key.sourcefile"): sourcekitd_request_string_create(file),
+            sourcekitd_uid_get_from_cstr("key.sourcetext"): sourcekitd_request_string_create(content),
+            sourcekitd_uid_get_from_cstr("key.offset"): sourcekitd_request_int64_create(offset),
+            sourcekitd_uid_get_from_cstr("key.compilerargs"): sourcekitd_request_array_create(&compilerargs, compilerargs.count)
+        ]
 
-        var error: UnsafeMutablePointer<Int8>?
-        let req: sourcekitd_object_t = sourcekitd_request_create_from_yaml(yaml, &error)
-        if let error = error {
-            let message = String(cString: error)
-            log("sourcekitd: failed creating the request: %{public}@", category: languageServerLogCategory, message)
-        }
-
-        log("sourcekitd: request created", category: languageServerLogCategory)
+        var keys = Array(dict.keys.map({ $0 as sourcekitd_uid_t? }))
+        var values = Array(dict.values)
+        guard let req = sourcekitd_request_dictionary_create(&keys, &values, dict.count) else {
+            throw "unable to create the request from the give values."
+        }        
 
         let res: sourcekitd_object_t = sourcekitd_send_request_sync(req)
         defer { sourcekitd_response_dispose(res) }

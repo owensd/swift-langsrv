@@ -4,5 +4,5 @@
  */
 
 public enum VersionInfo {
-    static public let version = "0.11.4"
+    static public let version = "0.11.5"
 }
