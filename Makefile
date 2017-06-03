@@ -1,17 +1,18 @@
 .PHONY: release debug clean generate-version tag
 
-Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc /Library/Developer/Toolchains/swift-3.1.1-RELEASE.xctoolchain/usr/lib
+ToolchainLibPath=/Library/Developer/Toolchains/swift-3.1.1-RELEASE.xctoolchain/usr/lib
+Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(ToolchainLibPath)
 
 debug: generate-version generate-sourcekit-map
 	swift build -c debug $(Flags)
-	swift test -c debug
+	swift test -c debug $(Flags)
 
 release: generate-version generate-sourcekit-map
 ifeq ($(shell uname -s),Darwin)
-	swift build -c release -Xswiftc -static-stdlib
-	swift test -c release
+	swift build -c release -Xswiftc -static-stdlib $(Flags)
+	swift test -c release $(Flags)
 else
-	swift build -c release
+	swift build -c release $(Flags)
 endif
 
 clean:

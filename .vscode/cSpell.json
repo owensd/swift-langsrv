@@ -20,7 +20,8 @@
         "chdir",
         "swiftver",
         "sourcekitd",
-        "fastlane"
+        "fastlane",
+        "sourcekit"
     ],
     // flagWords - list of words to be always considered incorrect
     // This is useful for offensive words and common spelling errors.

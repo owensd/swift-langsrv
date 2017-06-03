@@ -11,9 +11,9 @@
     },
     "osx": {
         "version": "2.0.0",
-        "command": "swift",
+        "command": "make",
         "isShellCommand": true,
-        "args": ["build"],
+        "args": ["debug"],
         "showOutput": "always"
     },
     "linux": {
