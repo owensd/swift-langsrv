@@ -25,4 +25,4 @@ generate-sourcekit-map:
 	./Scripts/genskmap.sh
 
 tag:
-	git tag "v$(shell sed 's/^version: \(.*\)/\1/' ./Sources/VersionInfo/VersionInfo.yaml)"
+	git tag "v$(shell sed 's/^version: \(.*\)/\1/' ./VersionInfo.yaml)"
