@@ -8,13 +8,16 @@ Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc $(ToolchainLi
 debug: generate-version generate-sourcekit-map
 	swift build -c debug $(Flags)
 	swift test -c debug $(Flags)
+	./Scripts/fixrpath.sh release
 
 release: generate-version generate-sourcekit-map
 ifeq ($(shell uname -s),Darwin)
 	swift build -c release -Xswiftc -static-stdlib $(Flags)
 	swift test -c release $(Flags)
+	./Scripts/fixrpath.sh release
 else
 	swift build -c release $(Flags)
+	./Scripts/fixrpath.sh release
 endif
 
 clean:

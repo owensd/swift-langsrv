@@ -68,5 +68,5 @@ fastlane/test_output
 .DS_Store
 
 # Project Specifics
-Sources/VersionInfo/VersionInfo.swift
+Sources/langsrv/VersionInfo.swift
 Sources/sourcekitd/include/module.modulemap
