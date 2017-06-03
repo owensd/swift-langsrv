@@ -1,7 +1,7 @@
 .PHONY: release debug clean generate-version tag
 
 ToolchainLibPath=/Library/Developer/Toolchains/swift-3.1.1-RELEASE.xctoolchain/usr/lib
-XcodeDefaultPath=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain
+XcodeDefaultPath=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
 Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(XcodeDefaultPath)
 
 debug: generate-version generate-sourcekit-map
