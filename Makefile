@@ -37,7 +37,6 @@ publish: release tag
 	cp .build/release/libsourcekitd.dylib .build/releases
 	rm -f .build/releases/apous-macos-$(Version).zip
 	zip -ojm .build/releases/apous-macos-$(Version).zip .build/releases/*
-	./Scripts/ok.sh create_release owensd vscode-swift $(Version)
 	echo "Please upload .build/releases/apous-macos-$(Version).zip to GitHub manually."
 
 tag:
