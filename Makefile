@@ -35,9 +35,9 @@ publish: release tag
 	mkdir -p .build/releases
 	cp .build/release/langsrv .build/releases
 	cp .build/release/libsourcekitd.dylib .build/releases
-	rm -f .build/releases/apous-macos-$(Version).zip
-	zip -ojm .build/releases/apous-macos-$(Version).zip .build/releases/*
-	echo "Please upload .build/releases/apous-macos-$(Version).zip to GitHub manually."
+	rm -f .build/releases/langsrv-macos-$(Version).zip
+	zip -ojm .build/releases/langsrv-macos-$(Version).zip .build/releases/*
+	echo "Please upload .build/releases/langsrv-macos-$(Version).zip to GitHub manually."
 
 tag:
 	git tag $(Version)
