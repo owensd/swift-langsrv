@@ -31,12 +31,12 @@ generate-version:
 generate-sourcekit-map:
 	./Scripts/genskmap.sh
 
-publish: release
+publish: release tag
 	mkdir -p .build/releases
 	cp .build/release/langsrv .build/releases
 	cp .build/release/libsourcekitd.dylib .build/releases
 	rm -f .build/releases/apous-macos-$(Version).zip
-	zip -ojm .build/releases/apous-macos-$(Version).zip build/releases/*
+	zip -ojm .build/releases/apous-macos-$(Version).zip .build/releases/*
 	./Scripts/ok.sh create_release owensd vscode-swift $(Version)
 	echo "Please upload .build/releases/apous-macos-$(Version).zip to GitHub manually."
 
