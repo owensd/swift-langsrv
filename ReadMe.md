@@ -25,9 +25,19 @@ of a `MessageSource` class. That data is processed and passed along to a `Messag
 implementation. From here, the data is parsed and turned into commands that can then be passed
 on to a `LanguageServer` instance.
 
+## Releasing
+
+Before publishing a new release, it's important to have a clean CI build, the appropriate version
+set in `VersionInfo`, and a matching tag. Only the release bits should be published. Once that is
+all locked down, simply run `make publish`. A new release will be pushed up to GitHub.
+
+BE CAREFUL! All release will be immediately available for others to download and use. This project
+makes use of [semantic versioning][semver]. As such, some tools may automatically pick up new
+versions based on `PATCH` version changes.
 
 > Copyright (c) Kiad Studios, LLC. All rights reserved.
 > Licensed under the MIT License. See License in the project root for license information.
 
 [1]: https://github.com/Microsoft/language-server-protocol
 [2]: https://code.visualstudio.com
+[semver]: http://semver.org

@@ -11,6 +11,7 @@ import LanguageServerProtocol
 import sourcekitd
 
 let languageServerLogCategory = "SwiftLanguageServer"
+let languageServerSettingsKey = "swift"
 
 public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
@@ -84,9 +85,9 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
         var capabilities = ServerCapabilities()
         capabilities.textDocumentSync = .kind(.full)
-        capabilities.hoverProvider = true
+        //capabilities.hoverProvider = true
         capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
-        capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
+        //capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
         // capabilities.definitionProvider = true
         // capabilities.referencesProvider = true
         // capabilities.documentHighlightProvider = true
@@ -109,7 +110,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
-        let settings = (params.settings as! JSValue)["swift-langsrv"]
+        let settings = (params.settings as! JSValue)[languageServerSettingsKey]
 
         guard let toolchainPath = settings["toolchainPath"].string else {
             throw "The path to the Toolchain must be set."
