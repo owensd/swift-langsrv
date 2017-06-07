@@ -100,6 +100,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         // capabilities.documentOnTypeFormattingProvider = DocumentOnTypeFormattingOptions(firstTriggerCharacter: "{", moreTriggerCharacter: nil)
         // capabilities.renameProvider = true
         // capabilities.documentLinkProvider = DocumentLinkOptions(resolveProvider: false)
+        
 
         return .initialize(requestId: requestId, result: InitializeResult(capabilities: capabilities))
     }

@@ -31,13 +31,15 @@ generate-version:
 generate-sourcekit-map:
 	./Scripts/genskmap.sh
 
-publish: release tag
+package: release
 	mkdir -p .build/releases
 	cp .build/release/langsrv .build/releases
 	cp .build/release/libsourcekitd.dylib .build/releases
 	rm -f .build/releases/langsrv-macos-$(Version).zip
 	zip -ojm .build/releases/langsrv-macos-$(Version).zip .build/releases/*
-	echo "Please upload .build/releases/langsrv-macos-$(Version).zip to GitHub manually."
+
+publish: zip tag
+	@echo "Please upload .build/releases/langsrv-macos-$(Version).zip to GitHub manually."
 
 tag:
 	git tag $(Version)
