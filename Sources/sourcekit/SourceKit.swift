@@ -83,12 +83,11 @@ private func compilerArgs(packageName: String, projectPath: String, filePath: St
         "-module-cache-path","\(projectPath)/.build/debug/ModuleCache"]
 
     let components = filePath.components(separatedBy: "/")
-    let module: String
+    var module = packageName
     if let index = components.index(of: "Sources") {
-        module = components[index + 1].hasSuffix(".swift") ? packageName : components[index + 1]
-    }
-    else {
-        module = packageName
+        if index < components.count - 1 {
+            module = components[index + 1].hasSuffix(".swift") ? packageName : components[index + 1]
+        }
     }
     let inputs = try inputsFor(projectPath: projectPath, module: module)
 
