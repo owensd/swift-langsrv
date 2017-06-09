@@ -85,6 +85,9 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         case .textDocumentHover(let requestId, let params):
             return try doHover(requestId, params)
 
+        case .textDocumentDefinition(let requestId, let params):
+            return try doDefinition(requestId, params)
+
         default: throw "command is not supported: \(command)"
         }
 
@@ -308,6 +311,55 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
         let hover = Hover(contents: strings)
         return .textDocumentHover(requestId: requestId, result: hover)
+    }
+
+    private func doDefinition(_ requestId: RequestId, _ params: TextDocumentPositionParams) throws -> LanguageServerResponse {
+        let uri = params.textDocument.uri
+
+        guard let content = openDocuments[uri] else {
+            throw "attempting to do completion on an unopened document? \(uri)"
+        }
+        let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
+        log("content:\n%{public}@", category: languageServerLogCategory, content)
+        log("calculated %{public}@", category: languageServerLogCategory, "offset: \(offset), line: \(params.position.line), character: \(params.position.character)")
+
+        let result = try sourcekit(cursorInfo: content, offset: offset, packageName: packageName, projectPath: projectPath, filePath: URL(string: uri)!.path)
+        log("sourcekit response:\n%{public}@", category: languageServerLogCategory, result)
+
+        guard let json = try? JSValue.parse(result) else {
+            throw "unable to parse the sourcekit(cursorInfo:offset:path:) response"
+        }
+
+        guard
+            let path = json["key.filepath"].string,
+            let definitionOffset = json["key.offset"].integer,
+            let length = json["key.length"].integer else {
+                throw "unable to retrieve the file or offset in the file."
+            }
+        
+        let fileContent = try String(contentsOfFile: path)
+        let start = calculatePosition(in: fileContent, offset: definitionOffset)
+        let end = Position(line: start.line, character: start.character + length)
+        let range = Range(start: start, end: end)
+        return .textDocumentDefinition(requestId: requestId, result: [Location(uri: "file://\(path)", range: range)])
+    }
+
+    func calculatePosition(in content: String, offset: Int) -> Position {
+        var lineCounter = 0
+        var characterCounter = 0
+
+        for (idx, c) in content.characters.enumerated() {
+            if idx == offset { break }
+            if c == "\n" || c == "\r\n" {
+                lineCounter += 1
+                characterCounter = 0
+            }
+            else {
+                characterCounter += 1
+            }
+        }
+
+        return Position(line: lineCounter, character: characterCounter)
     }
 
     func calculateOffset(in content: String, line: Int, character: Int) -> Int64 {
