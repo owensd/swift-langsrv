@@ -88,6 +88,9 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         case .textDocumentDefinition(let requestId, let params):
             return try doDefinition(requestId, params)
 
+        case .textDocumentSignatureHelp(let requestId, let params):
+            return try doSignatureHelp(requestId, params)
+
         default: throw "command is not supported: \(command)"
         }
 
@@ -104,8 +107,8 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         capabilities.textDocumentSync = .kind(.full)
         capabilities.hoverProvider = true
         capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
-        capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["."])
         capabilities.definitionProvider = true
+        //capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["("])
         // capabilities.referencesProvider = true
         // capabilities.documentHighlightProvider = true
         // capabilities.documentSymbolProvider = true
@@ -342,6 +345,30 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         let end = Position(line: start.line, character: start.character + length)
         let range = Range(start: start, end: end)
         return .textDocumentDefinition(requestId: requestId, result: [Location(uri: "file://\(path)", range: range)])
+    }
+
+    private func doSignatureHelp(_ requestId: RequestId, _ params: TextDocumentPositionParams) throws -> LanguageServerResponse {
+        let uri = params.textDocument.uri
+
+        guard let content = openDocuments[uri] else {
+            throw "attempting to do completion on an unopened document? \(uri)"
+        }
+        let offset = calculateOffset(in: content, line: params.position.line, character: params.position.character)
+        log("content:\n%{public}@", category: languageServerLogCategory, content)
+        log("calculated %{public}@", category: languageServerLogCategory, "offset: \(offset), line: \(params.position.line), character: \(params.position.character)")
+
+        let result = try sourcekit(cursorInfo: content, offset: offset, packageName: packageName, projectPath: projectPath, filePath: URL(string: uri)!.path)
+        log("sourcekit response:\n%{public}@", category: languageServerLogCategory, result)
+
+        guard let json = try? JSValue.parse(result) else {
+            throw "unable to parse the sourcekit(cursorInfo:offset:path:) response"
+        }
+
+        if let decl = json["key.annotated_decl"].string {
+            throw decl
+        }
+
+        throw "nyi"
     }
 
     func calculatePosition(in content: String, offset: Int) -> Position {
