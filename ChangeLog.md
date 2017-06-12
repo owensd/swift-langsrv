@@ -1,3 +1,8 @@
+## Version 0.16.1
+ - The Xcode toolchain is now supported for building the `swift-langsrv` project.
+ - Better support for the Xcode toolchain for the plugin.
+ - Better error information when the toolchain has issues.
+
 ## Version 0.15.0
 
  - Full support for SwiftPM projects layouts.
