@@ -13,6 +13,11 @@ import sourcekit
 let languageServerLogCategory = "SwiftLanguageServer"
 let languageServerSettingsKey = "swift"
 
+public enum LanguageServerError: Error {
+    case toolchainNotFound(path: String)
+    case swiftToolNotFound(path: String)
+}
+
 public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     private var initialized = false
     private var canExit = false
@@ -26,6 +31,10 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     // Settings that are not updated until a workspaceDidChangeConfiguration request comes in.
     private var toolchainPath: String!
     private var packageName: String!
+
+    private var packagePath: String!
+    private var includePath: String!
+    private var swiftPath: String!
 
 
     /// Initializes a new instance of a `SwiftLanguageServer`.
@@ -45,6 +54,17 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
                 guard let response = try self.process(command: command) else { return nil }
                 return try self.transport.translate(response: response)
+            }
+            catch LanguageServerError.toolchainNotFound(let path) {                
+                let params = ShowMessageParams(type: MessageType.error, message: "Unable to find the toolchain at: \(path)")
+                let response = LanguageServerResponse.windowShowMessage(params: params)
+
+                do {
+                    return try self.transport.translate(response: response)
+                }
+                catch {
+                    log("unable to convert error message: %{public}@", category: languageServerLogCategory, String(describing: error))
+                }
             }
             catch {
                 log("unable to convert message into a command: %{public}@", category: languageServerLogCategory, String(describing: error))
@@ -72,6 +92,9 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         
         case .workspaceDidChangeConfiguration(let params):
             try doWorkspaceDidChangeConfiguration(params)
+
+        case .workspaceDidChangeWatchedFiles(let params):
+            try doWorkspaceDidChangeWatchedFiles(params)
 
         case .textDocumentDidOpen(let params):
             try doDocumentDidOpen(params)
@@ -108,7 +131,7 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         capabilities.hoverProvider = true
         capabilities.completionProvider = CompletionOptions(resolveProvider: nil, triggerCharacters: ["."])
         capabilities.definitionProvider = true
-        //capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["("])
+        // capabilities.signatureHelpProvider = SignatureHelpOptions(triggerCharacters: ["("])
         // capabilities.referencesProvider = true
         // capabilities.documentHighlightProvider = true
         // capabilities.documentSymbolProvider = true
@@ -130,17 +153,28 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
     }
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
-        let settings = (params.settings as! JSValue)[languageServerSettingsKey]
+        let settings = (params.settings as! JSValue)[languageServerSettingsKey] ?? [:]
 
-        guard let toolchainPath = settings["toolchainPath"].string else {
-            throw "The path to the Toolchain must be set."
-        }
-        self.toolchainPath = toolchainPath
+        self.toolchainPath = getToolchainPath(settings)
         log("configuration: toolchainPath set to %{public}@", category: languageServerLogCategory, toolchainPath)
 
-        let packagePath = "\(projectPath!)/Package.swift"
-        let includePath = "\(toolchainPath)/usr/lib/swift/pm"
-        let swiftPath = "\(toolchainPath)/usr/bin/swift"
+        if !FileManager.default.fileExists(atPath: self.toolchainPath) {
+            throw LanguageServerError.toolchainNotFound(path: self.toolchainPath)
+        }
+
+        self.packagePath = "\(projectPath!)/Package.swift"
+        self.includePath = "\(toolchainPath!)/usr/lib/swift/pm"
+        self.swiftPath = "\(toolchainPath!)/usr/bin/swift"
+
+        if !FileManager.default.fileExists(atPath: self.swiftPath) {
+            throw LanguageServerError.swiftToolNotFound(path: self.swiftPath)
+        }
+
+        // Force the generation of the `debug.yaml` file... need a better way.
+        let _ = shell(
+            tool: swiftPath,
+            arguments: ["build"],
+            currentDirectory: projectPath)
 
         let output = shell(
             tool: swiftPath,
@@ -155,6 +189,16 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         log("package name parsed from Package.swift: %{public}@", category: languageServerLogCategory, packageName)
 
         // TODO(owensd): handle targets...
+    }
+
+    private func doWorkspaceDidChangeWatchedFiles(_ params: DidChangeWatchedFilesParams) {
+        // NOTE(owensd): This is not being fired and I don't know why...
+
+        // Force the generation of the `debug.yaml` file... need a better way.
+        let _ = shell(
+            tool: swiftPath,
+            arguments: ["build"],
+            currentDirectory: projectPath)
     }
 
     private func doShutdown(_ requestId: RequestId) throws -> LanguageServerResponse {
@@ -454,6 +498,17 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         case "source.lang.swift.decl.extension.enum": return .`enum`
         default: return .text
         }
+    }
+
+    private func getToolchainPath(_ settings: JSValue) -> String {
+        if let toolchainPath = settings["toolchainPath"].string {
+            return toolchainPath
+        }
+
+        let path = shell(tool: "/usr/bin/xcrun", arguments: ["-f", "swift"])
+        return path
+            .replacingOccurrences(of: "/usr/bin/swift", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
