@@ -1,18 +1,20 @@
-.PHONY: release debug clean generate-version generation-sourcekit-map publish tag
+.PHONY: release debug clean generate-version publish tag
 
-ToolchainLibPath=/Library/Developer/Toolchains/swift-3.1.1-RELEASE.xctoolchain/usr/lib
-XcodeDefaultPath=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
-PlatformSdkPath=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/
-Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(XcodeDefaultPath) -Xlinker -rpath -Xlinker $(PlatformSdkPath)
+# Use the standard tools to change the version of Swift you would like to compile with.
+SwiftToolPath=$(shell xcrun -f swift)
+ToolchainPath=$(SwiftToolPath:/usr/bin/swift=)
+ToolchainLibPath=$(ToolchainPath)/usr/lib
+SwiftPlatformSdkPath=$(ToolchainLibPath)/swift/macosx/
+Flags=-Xswiftc -framework -Xswiftc sourcekitd -Xswiftc -F -Xswiftc $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(ToolchainLibPath) -Xlinker -rpath -Xlinker $(SwiftPlatformSdkPath)
 
 Version=v$(shell sed 's/^version: \(.*\)/\1/' ./VersionInfo)
 
-debug: generate-version generate-sourcekit-map
+debug: generate-version
 	swift build -c debug $(Flags)
 	swift test -c debug $(Flags)
 	./Scripts/fixrpath.sh debug
 
-release: generate-version generate-sourcekit-map
+release: generate-version
 ifeq ($(shell uname -s),Darwin)
 	swift build -c release -Xswiftc -static-stdlib $(Flags)
 	swift test -c release $(Flags)
@@ -27,9 +29,6 @@ clean:
 
 generate-version:
 	./Scripts/genvers.sh
-
-generate-sourcekit-map:
-	./Scripts/genskmap.sh
 
 package: release
 	mkdir -p .build/releases
