@@ -37,7 +37,7 @@ package: release
 	rm -f .build/releases/langsrv-macos-$(Version).zip
 	zip -ojm .build/releases/langsrv-macos-$(Version).zip .build/releases/*
 
-publish: zip tag
+publish: package tag
 	@echo "Please upload .build/releases/langsrv-macos-$(Version).zip to GitHub manually."
 
 tag:
