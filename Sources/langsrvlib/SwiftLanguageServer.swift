@@ -143,6 +143,8 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         // capabilities.documentOnTypeFormattingProvider = DocumentOnTypeFormattingOptions(firstTriggerCharacter: "{", moreTriggerCharacter: nil)
         // capabilities.renameProvider = true
         // capabilities.documentLinkProvider = DocumentLinkOptions(resolveProvider: false)
+
+        try configureWorkspace(settings: nil)
         
         return .initialize(requestId: requestId, result: InitializeResult(capabilities: capabilities))
     }
@@ -154,7 +156,10 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
 
     private func doWorkspaceDidChangeConfiguration(_ params: DidChangeConfigurationParams) throws {
         let settings = (params.settings as! JSValue)[languageServerSettingsKey] ?? [:]
+        try configureWorkspace(settings: settings)
+    }
 
+    private func configureWorkspace(settings: JSValue?) throws {
         self.toolchainPath = getToolchainPath(settings)
         log("configuration: toolchainPath set to %{public}@", category: languageServerLogCategory, toolchainPath)
 
@@ -500,8 +505,8 @@ public final class SwiftLanguageServer<TransportType: MessageProtocol> {
         }
     }
 
-    private func getToolchainPath(_ settings: JSValue) -> String {
-        if let toolchainPath = settings["toolchainPath"].string {
+    private func getToolchainPath(_ settings: JSValue?) -> String {
+        if let toolchainPath = settings?["toolchainPath"].string {
             return toolchainPath
         }
 
